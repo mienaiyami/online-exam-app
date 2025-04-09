@@ -6,27 +6,27 @@ import GoogleProvider from "next-auth/providers/google";
 
 import { db } from "@/server/db";
 import {
-  accounts,
-  sessions,
-  userRoles,
-  users,
-  verificationTokens,
+    accounts,
+    sessions,
+    userRoles,
+    users,
+    verificationTokens,
 } from "@/server/db/schema";
 import { eq } from "drizzle-orm";
 
 declare module "next-auth" {
-  interface Session extends DefaultSession {
-    user: {
-      id: string;
-      // ...other properties
-      roles: ("admin" | "instructor" | "student")[];
-    } & DefaultSession["user"];
-  }
+    interface Session extends DefaultSession {
+        user: {
+            id: string;
+            // ...other properties
+            roles: ("admin" | "instructor" | "student")[];
+        } & DefaultSession["user"];
+    }
 
-  // interface User {
-  //   // ...other properties
-  //   // role: UserRole;
-  // }
+    // interface User {
+    //   // ...other properties
+    //   // role: UserRole;
+    // }
 }
 
 /**
@@ -35,32 +35,32 @@ declare module "next-auth" {
  * @see https://next-auth.js.org/configuration/options
  */
 export const authConfig = {
-  debug: process.env.NODE_ENV === "development",
-  providers: [
-    // DiscordProvider
-    GitHubProvider,
-    // GoogleProvider
-  ],
-  adapter: DrizzleAdapter(db, {
-    usersTable: users,
-    accountsTable: accounts,
-    sessionsTable: sessions,
-    verificationTokensTable: verificationTokens,
-  }),
-  callbacks: {
-    session: async ({ session, user }) => {
-      const userRolesList = await db.query.userRoles.findMany({
-        where: eq(userRoles.userId, user.id),
-      });
-      const roles = userRolesList.map((role) => role.role);
-      return {
-        ...session,
-        user: {
-          ...session.user,
-          id: user.id,
-          roles,
+    // debug: process.env.NODE_ENV === "development",
+    providers: [
+        // DiscordProvider
+        GitHubProvider,
+        // GoogleProvider
+    ],
+    adapter: DrizzleAdapter(db, {
+        usersTable: users,
+        accountsTable: accounts,
+        sessionsTable: sessions,
+        verificationTokensTable: verificationTokens,
+    }),
+    callbacks: {
+        session: async ({ session, user }) => {
+            const userRolesList = await db.query.userRoles.findMany({
+                where: eq(userRoles.userId, user.id),
+            });
+            const roles = userRolesList.map((role) => role.role);
+            return {
+                ...session,
+                user: {
+                    ...session.user,
+                    id: user.id,
+                    roles,
+                },
+            };
         },
-      };
     },
-  },
 } satisfies NextAuthConfig;

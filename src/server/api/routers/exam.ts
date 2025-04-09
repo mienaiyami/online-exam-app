@@ -31,6 +31,12 @@ const createQuestionSchema = z.object({
         .optional(),
 });
 
+const updateQuestionSchema = createQuestionSchema
+    .omit({ examId: true })
+    .extend({
+        questionId: z.number().int().positive(),
+    });
+
 const assignExamSchema = z.object({
     examId: z.number().int().positive(),
     userIds: z.array(z.string()),
@@ -187,6 +193,109 @@ export const examRouter = createTRPCRouter({
             });
         }),
 
+    updateQuestion: protectedProcedure
+        .input(updateQuestionSchema)
+        .mutation(async ({ ctx, input }) => {
+            const question = await ctx.db.query.questions.findFirst({
+                where: eq(questions.id, input.questionId),
+                with: {
+                    exam: true,
+                },
+            });
+
+            if (!question) {
+                throw new TRPCError({
+                    code: "NOT_FOUND",
+                    message: "Question not found",
+                });
+            }
+
+            if (question.exam.createdById !== ctx.session.user.id) {
+                throw new TRPCError({
+                    code: "FORBIDDEN",
+                    message:
+                        "Only the creator can update questions in this exam",
+                });
+            }
+
+            return await ctx.db.transaction(async (tx) => {
+                const [updatedQuestion] = await tx
+                    .update(questions)
+                    .set({
+                        questionText: input.questionText,
+                        questionType: input.questionType,
+                        points: input.points,
+                        orderIndex: input.orderIndex,
+                    })
+                    .where(eq(questions.id, input.questionId))
+                    .returning();
+
+                if (!updatedQuestion) {
+                    throw new TRPCError({
+                        code: "INTERNAL_SERVER_ERROR",
+                        message: "Failed to update question",
+                    });
+                }
+
+                if (input.questionType === "multiple_choice" && input.options) {
+                    if (input.options.length === 0) {
+                        throw new TRPCError({
+                            code: "BAD_REQUEST",
+                            message:
+                                "Multiple choice questions must have at least one option",
+                        });
+                    }
+                    await tx
+                        .delete(options)
+                        .where(eq(options.questionId, input.questionId));
+
+                    if (input.options.length > 0) {
+                        await tx.insert(options).values(
+                            input.options.map((option) => ({
+                                questionId: input.questionId,
+                                optionText: option.optionText,
+                                isCorrect: option.isCorrect,
+                                orderIndex: option.orderIndex,
+                            })),
+                        );
+                    }
+                }
+
+                return updatedQuestion;
+            });
+        }),
+
+    deleteQuestion: protectedProcedure
+        .input(z.object({ questionId: z.number().int().positive() }))
+        .mutation(async ({ ctx, input }) => {
+            const question = await ctx.db.query.questions.findFirst({
+                where: eq(questions.id, input.questionId),
+                with: {
+                    exam: true,
+                },
+            });
+
+            if (!question) {
+                throw new TRPCError({
+                    code: "NOT_FOUND",
+                    message: "Question not found",
+                });
+            }
+
+            if (question.exam.createdById !== ctx.session.user.id) {
+                throw new TRPCError({
+                    code: "FORBIDDEN",
+                    message:
+                        "Only the creator can delete questions in this exam",
+                });
+            }
+
+            await ctx.db
+                .delete(questions)
+                .where(eq(questions.id, input.questionId));
+
+            return { success: true, message: "Question deleted successfully" };
+        }),
     assignExam: protectedProcedure
         .input(assignExamSchema)
         .mutation(async ({ ctx, input }) => {

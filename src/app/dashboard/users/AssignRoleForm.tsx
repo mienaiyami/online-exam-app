@@ -18,20 +18,48 @@ export function AssignRoleForm({ userId }: { userId: string }) {
         "admin" | "instructor" | "student"
     >("student");
     const router = useRouter();
+    const utils = api.useUtils();
+    const userRoles = api.user.getCurrentUserRoles.useQuery(undefined, {
+        select(data) {
+            return data.map((role) => role.role);
+        },
+    });
 
     const assignRole = api.user.assignRole.useMutation({
-        onSuccess: () => {
+        onSuccess: (data) => {
             router.refresh();
-            toast.success("Role assigned successfully");
+            toast.success(data.message ?? "Role assigned successfully");
+            void utils.user.invalidate();
+        },
+        onError: (error) => {
+            toast.error(error.message ?? "Failed to assign role");
+        },
+    });
+    const removeRole = api.user.removeRole.useMutation({
+        onSuccess: (data) => {
+            router.refresh();
+            toast.success("Role removed successfully");
+            void utils.user.invalidate();
+        },
+        onError: (error) => {
+            toast.error(error.message ?? "Failed to remove role");
         },
     });
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
-        assignRole.mutate({
-            userId,
-            role: selectedRole,
-        });
+        if (userRoles.data?.includes(selectedRole)) {
+            console.log("Removing role");
+            removeRole.mutate({
+                userId,
+                role: selectedRole,
+            });
+        } else {
+            assignRole.mutate({
+                userId,
+                role: selectedRole,
+            });
+        }
     };
 
     return (
@@ -52,10 +80,15 @@ export function AssignRoleForm({ userId }: { userId: string }) {
                     <SelectItem value="student">Student</SelectItem>
                 </SelectContent>
             </Select>
-
-            <Button type="submit" disabled={assignRole.isPending}>
-                {assignRole.isPending ? "Assigning..." : "Assign Role"}
-            </Button>
+            {userRoles.data?.includes(selectedRole) ? (
+                <Button type="submit" disabled={removeRole.isPending}>
+                    {removeRole.isPending ? "Removing..." : "Remove Role"}
+                </Button>
+            ) : (
+                <Button type="submit" disabled={assignRole.isPending}>
+                    {assignRole.isPending ? "Assigning..." : "Assign Role"}
+                </Button>
+            )}
         </form>
     );
 }

@@ -121,7 +121,7 @@ export default function ExamsPage() {
                                         </div>
                                     </CardContent>
                                     <Separator />
-                                    <CardFooter className="pt-4">
+                                    <CardFooter className="p-2">
                                         <Button
                                             asChild
                                             variant="secondary"

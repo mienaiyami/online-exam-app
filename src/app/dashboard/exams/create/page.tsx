@@ -7,20 +7,39 @@ import { toast } from "sonner";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { Button } from "@/components/ui/button";
+import { Pencil, Trash2 } from "lucide-react";
+import {
+    AlertDialog,
+    AlertDialogAction,
+    AlertDialogCancel,
+    AlertDialogContent,
+    AlertDialogDescription,
+    AlertDialogFooter,
+    AlertDialogHeader,
+    AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 import { api } from "@/trpc/react";
-import { ExamDetailsForm } from "./components/exam-details-form";
-import { QuestionForm } from "./components/question-form";
+import { ExamDetailsForm } from "./_components/exam-details-form";
+import { QuestionForm } from "./_components/question-form";
 import type { ExamFormValues, QuestionFormValues } from "./schema";
+
+// Extended type for questions with IDs
+type QuestionWithId = QuestionFormValues & { id?: number };
 
 export default function CreateExamPage() {
     const router = useRouter();
     const [step, setStep] = React.useState<"details" | "questions">("details");
     const [examId, setExamId] = React.useState<number | null>(null);
-    const [questions, setQuestions] = React.useState<QuestionFormValues[]>([]);
+    const [questions, setQuestions] = React.useState<QuestionWithId[]>([]);
     const [currentQuestion, setCurrentQuestion] =
-        React.useState<QuestionFormValues | null>(null);
+        React.useState<QuestionWithId | null>(null);
     const [examData, setExamData] = React.useState<ExamFormValues | null>(null);
+    const [editingIndex, setEditingIndex] = React.useState<number | null>(null);
+    const [deleteConfirmOpen, setDeleteConfirmOpen] = React.useState(false);
+    const [deletingIndex, setDeletingIndex] = React.useState<number | null>(
+        null,
+    );
 
     const createExamMutation = api.exam.create.useMutation({
         onSuccess: (data) => {
@@ -34,12 +53,50 @@ export default function CreateExamPage() {
     });
 
     const addQuestionMutation = api.exam.addQuestion.useMutation({
-        onSuccess: () => {
+        onSuccess: (data) => {
             toast.success("Question added successfully!");
+
+            setQuestions((prev) =>
+                prev.map((q, index) =>
+                    index === prev.length - 1 ? { ...q, id: data.id } : q,
+                ),
+            );
+
             setCurrentQuestion(null);
         },
         onError: (error) => {
             toast.error(`Failed to add question: ${error.message}`);
+        },
+    });
+
+    const updateQuestionMutation = api.exam.updateQuestion.useMutation({
+        onSuccess: () => {
+            toast.success("Question updated successfully!");
+            setEditingIndex(null);
+            setCurrentQuestion(null);
+        },
+        onError: (error) => {
+            toast.error(`Failed to update question: ${error.message}`);
+        },
+    });
+
+    const deleteQuestionMutation = api.exam.deleteQuestion.useMutation({
+        onSuccess: () => {
+            toast.success("Question deleted successfully!");
+
+            if (deletingIndex !== null) {
+                setQuestions((prev) =>
+                    prev
+                        .filter((_, index) => index !== deletingIndex)
+                        .map((q, index) => ({ ...q, orderIndex: index })),
+                );
+            }
+
+            setDeletingIndex(null);
+            setDeleteConfirmOpen(false);
+        },
+        onError: (error) => {
+            toast.error(`Failed to delete question: ${error.message}`);
         },
     });
 
@@ -50,6 +107,8 @@ export default function CreateExamPage() {
 
     const handleAddNewQuestion = () => {
         if (!examId) return;
+
+        setEditingIndex(null);
 
         setCurrentQuestion({
             questionText: "",
@@ -64,18 +123,46 @@ export default function CreateExamPage() {
     };
 
     const handleQuestionSubmit = (data: QuestionFormValues) => {
-        console.log({
-            data,
-            examId,
-        });
         if (!examId) return;
 
-        addQuestionMutation.mutate({
-            examId,
-            ...data,
-        });
+        if (editingIndex !== null) {
+            const question = questions[editingIndex];
+            if (question && question.id) {
+                updateQuestionMutation.mutate({
+                    questionId: question.id,
+                    ...data,
+                });
 
-        setQuestions((prev) => [...prev, data]);
+                setQuestions((prev) => {
+                    const newQuestions = [...prev];
+                    newQuestions[editingIndex] = {
+                        ...data,
+                        id: question.id,
+                    };
+                    return newQuestions;
+                });
+            }
+        } else {
+            addQuestionMutation.mutate({
+                examId,
+                ...data,
+            });
+
+            setQuestions((prev) => [...prev, data]);
+        }
+    };
+
+    const handleEditQuestion = (index: number) => {
+        setEditingIndex(index);
+        const questionToEdit = questions[index];
+        if (questionToEdit) {
+            setCurrentQuestion(questionToEdit);
+        }
+    };
+
+    const handleDeleteQuestion = (index: number) => {
+        setDeletingIndex(index);
+        setDeleteConfirmOpen(true);
     };
 
     const handleFinalize = () => {
@@ -146,14 +233,39 @@ export default function CreateExamPage() {
                                             Question {index + 1}:{" "}
                                             {question.questionType}
                                         </h3>
-                                        <div className="text-sm text-muted-foreground">
-                                            {question.points} point
-                                            {question.points !== 1 && "s"}
+                                        <div className="flex items-center gap-2">
+                                            <div className="mr-2 text-sm text-muted-foreground">
+                                                {question.points} point
+                                                {question.points !== 1 && "s"}
+                                            </div>
+
+                                            <Button
+                                                variant="ghost"
+                                                size="icon"
+                                                onClick={() =>
+                                                    handleEditQuestion(index)
+                                                }
+                                            >
+                                                <Pencil className="h-4 w-4" />
+                                            </Button>
+
+                                            <Button
+                                                variant="ghost"
+                                                size="icon"
+                                                onClick={() =>
+                                                    handleDeleteQuestion(index)
+                                                }
+                                            >
+                                                <Trash2 className="h-4 w-4" />
+                                            </Button>
                                         </div>
                                     </div>
-                                    <div className="whitespace-pre-wrap">
-                                        {question.questionText}
-                                    </div>
+                                    <div
+                                        className="whitespace-pre-wrap"
+                                        dangerouslySetInnerHTML={{
+                                            __html: question.questionText,
+                                        }}
+                                    ></div>
                                     {question.questionType ===
                                         "multiple_choice" &&
                                         question.options && (
@@ -191,7 +303,12 @@ export default function CreateExamPage() {
                     {currentQuestion && (
                         <QuestionForm
                             onSubmit={handleQuestionSubmit}
-                            questionIndex={questions.length}
+                            questionIndex={
+                                editingIndex !== null
+                                    ? editingIndex
+                                    : questions.length
+                            }
+                            defaultValues={currentQuestion}
                         />
                     )}
 
@@ -215,6 +332,51 @@ export default function CreateExamPage() {
                     )}
                 </div>
             )}
+
+            <AlertDialog
+                open={deleteConfirmOpen}
+                onOpenChange={setDeleteConfirmOpen}
+            >
+                <AlertDialogContent>
+                    <AlertDialogHeader>
+                        <AlertDialogTitle>Delete Question</AlertDialogTitle>
+                        <AlertDialogDescription>
+                            Are you sure you want to delete this question? This
+                            action cannot be undone.
+                        </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                        <AlertDialogCancel>Cancel</AlertDialogCancel>
+                        <AlertDialogAction
+                            onClick={() => {
+                                if (deletingIndex !== null) {
+                                    const question = questions[deletingIndex];
+                                    if (question && question.id) {
+                                        deleteQuestionMutation.mutate({
+                                            questionId: question.id,
+                                        });
+                                    } else {
+                                        setQuestions((prev) =>
+                                            prev
+                                                .filter(
+                                                    (_, i) =>
+                                                        i !== deletingIndex,
+                                                )
+                                                .map((q, i) => ({
+                                                    ...q,
+                                                    orderIndex: i,
+                                                })),
+                                        );
+                                    }
+                                    setDeleteConfirmOpen(false);
+                                }
+                            }}
+                        >
+                            Delete
+                        </AlertDialogAction>
+                    </AlertDialogFooter>
+                </AlertDialogContent>
+            </AlertDialog>
         </div>
     );
 }

@@ -47,7 +47,7 @@ export function QuestionForm({
     },
     questionIndex,
 }: QuestionFormProps) {
-    const form = useForm<QuestionFormValues>({
+    const form = useForm({
         resolver: zodResolver(questionFormSchema),
         defaultValues: defaultValues as QuestionFormValues,
     });
@@ -78,9 +78,17 @@ export function QuestionForm({
         );
     };
 
+    console.log(form.formState.errors);
+
     return (
         <Form {...form}>
-            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+            <form
+                onSubmit={form.handleSubmit(onSubmit)}
+                className="space-y-6"
+                ref={(node) => {
+                    node?.scrollIntoView({ behavior: "smooth" });
+                }}
+            >
                 <div className="rounded-lg border bg-card p-6 shadow-sm">
                     <div className="mb-6 flex items-center justify-between">
                         <h3 className="text-lg font-medium">
@@ -119,7 +127,15 @@ export function QuestionForm({
                                 render={({ field }) => (
                                     <FormItem>
                                         <Select
-                                            onValueChange={field.onChange}
+                                            onValueChange={(val) => {
+                                                field.onChange(val);
+                                                if (val !== "multiple_choice") {
+                                                    form.setValue(
+                                                        "options",
+                                                        undefined,
+                                                    );
+                                                }
+                                            }}
                                             defaultValue={field.value}
                                         >
                                             <FormControl>
