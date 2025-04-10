@@ -13,6 +13,9 @@ const createExamSchema = z.object({
     availableFrom: z.date().optional(),
     availableTo: z.date().optional(),
 });
+const updateExamSchema = createExamSchema.extend({
+    examId: z.number().int().positive(),
+});
 
 const createQuestionSchema = z.object({
     examId: z.number().int().positive(),
@@ -65,6 +68,63 @@ export const examRouter = createTRPCRouter({
                 });
             }
             return exam;
+        }),
+    deleteExam: protectedProcedure
+        .input(z.object({ examId: z.number().int().positive() }))
+        .mutation(async ({ ctx, input }) => {
+            const exam = await ctx.db.query.exams.findFirst({
+                where: eq(exams.id, input.examId),
+            });
+
+            if (!exam) {
+                throw new TRPCError({
+                    code: "NOT_FOUND",
+                    message: "Exam not found",
+                });
+            }
+
+            if (exam.createdById !== ctx.session.user.id) {
+                throw new TRPCError({
+                    code: "FORBIDDEN",
+                    message: "Only the creator can delete this exam",
+                });
+            }
+
+            await ctx.db.delete(exams).where(eq(exams.id, input.examId));
+
+            return { success: true, message: "Exam deleted successfully" };
+        }),
+
+    updateExam: protectedProcedure
+        .input(updateExamSchema)
+        .mutation(async ({ ctx, input }) => {
+            const { examId, ...updateData } = input;
+
+            const exam = await ctx.db.query.exams.findFirst({
+                where: eq(exams.id, examId),
+            });
+
+            if (!exam) {
+                throw new TRPCError({
+                    code: "NOT_FOUND",
+                    message: "Exam not found",
+                });
+            }
+
+            if (exam.createdById !== ctx.session.user.id) {
+                throw new TRPCError({
+                    code: "FORBIDDEN",
+                    message: "Only the creator can update this exam",
+                });
+            }
+
+            const [updatedExam] = await ctx.db
+                .update(exams)
+                .set(updateData)
+                .where(eq(exams.id, examId))
+                .returning();
+
+            return updatedExam;
         }),
 
     // exams created by the current user

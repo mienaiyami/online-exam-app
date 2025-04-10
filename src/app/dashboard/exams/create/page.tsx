@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useParams } from "next/navigation";
 import { toast } from "sonner";
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -20,11 +20,10 @@ import {
 } from "@/components/ui/alert-dialog";
 
 import { api } from "@/trpc/react";
-import { ExamDetailsForm } from "./_components/exam-details-form";
-import { QuestionForm } from "./_components/question-form";
+import { ExamDetailsForm } from "../_components/exam-details-form";
+import { QuestionForm } from "../_components/question-form";
 import type { ExamFormValues, QuestionFormValues } from "./schema";
 
-// Extended type for questions with IDs
 type QuestionWithId = QuestionFormValues & { id?: number };
 
 export default function CreateExamPage() {

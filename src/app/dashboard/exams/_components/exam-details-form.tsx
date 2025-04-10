@@ -26,11 +26,12 @@ import {
 } from "@/components/ui/popover";
 import { cn } from "@/lib/utils";
 
-import { type ExamFormValues, examFormSchema } from "../schema";
+import { type ExamFormValues, examFormSchema } from "../create/schema";
 
 type ExamDetailsFormProps = {
     onSubmit: (values: ExamFormValues) => void;
     defaultValues?: Partial<ExamFormValues>;
+    submitLabel?: string;
 };
 
 export function ExamDetailsForm({
@@ -40,6 +41,7 @@ export function ExamDetailsForm({
         description: "",
         timeLimit: 60,
     },
+    submitLabel = "Continue to Add Questions",
 }: ExamDetailsFormProps) {
     const form = useForm<ExamFormValues>({
         resolver: zodResolver(examFormSchema),
@@ -233,7 +235,7 @@ export function ExamDetailsForm({
                 </div>
 
                 <Button type="submit" className="w-full sm:w-auto">
-                    Continue to Add Questions
+                    {submitLabel}
                 </Button>
             </form>
         </Form>

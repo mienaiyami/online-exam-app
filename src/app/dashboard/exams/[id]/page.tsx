@@ -1,0 +1,371 @@
+"use client";
+
+import * as React from "react";
+import { useRouter, useParams } from "next/navigation";
+import Link from "next/link";
+import { format } from "date-fns";
+import { toast } from "sonner";
+import {
+    Calendar,
+    Clock,
+    Pencil,
+    Trash2,
+    ArrowLeft,
+    Users,
+} from "lucide-react";
+
+import { api } from "@/trpc/react";
+import { Button } from "@/components/ui/button";
+import {
+    Card,
+    CardContent,
+    CardDescription,
+    CardFooter,
+    CardHeader,
+    CardTitle,
+} from "@/components/ui/card";
+import { Separator } from "@/components/ui/separator";
+import {
+    AlertDialog,
+    AlertDialogAction,
+    AlertDialogCancel,
+    AlertDialogContent,
+    AlertDialogDescription,
+    AlertDialogFooter,
+    AlertDialogHeader,
+    AlertDialogTitle,
+    AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
+import { StrictDeleteAlert } from "../_components/strict-delete-alert";
+
+export default function ExamDetailPage() {
+    const router = useRouter();
+    const params = useParams<{ id: string }>();
+    const examId = parseInt(params.id, 10);
+
+    const [deleteQuestionId, setDeleteQuestionId] = React.useState<
+        number | null
+    >(null);
+
+    const {
+        data: exam,
+        isLoading,
+        refetch,
+    } = api.exam.getById.useQuery(
+        { examId },
+        {
+            enabled: !isNaN(examId),
+            refetchOnWindowFocus: false,
+        },
+    );
+
+    const deleteExamMutation = api.exam.deleteExam.useMutation({
+        onSuccess: () => {
+            toast.success("Exam deleted successfully");
+            router.push("/dashboard/exams");
+        },
+        onError: (error) => {
+            toast.error(`Failed to delete exam: ${error.message}`);
+        },
+    });
+
+    const deleteQuestionMutation = api.exam.deleteQuestion.useMutation({
+        onSuccess: () => {
+            toast.success("Question deleted successfully");
+            void refetch();
+            setDeleteQuestionId(null);
+        },
+        onError: (error) => {
+            toast.error(`Failed to delete question: ${error.message}`);
+        },
+    });
+
+    const formatDuration = (minutes: number) => {
+        if (minutes < 60) return `${minutes} min`;
+        const hours = Math.floor(minutes / 60);
+        const remainingMinutes = minutes % 60;
+        return `${hours} hr${hours > 1 ? "s" : ""}${
+            remainingMinutes > 0 ? ` ${remainingMinutes} min` : ""
+        }`;
+    };
+
+    const formatDate = (date: Date | null | undefined) => {
+        if (!date) return "Not set";
+        return format(new Date(date), "PPP");
+    };
+
+    const handleDeleteExam = () => {
+        if (!exam) return;
+        deleteExamMutation.mutate({ examId: exam.id });
+    };
+
+    const handleDeleteQuestion = (questionId: number) => {
+        deleteQuestionMutation.mutate({ questionId });
+    };
+
+    if (isLoading) {
+        return (
+            <div className="container flex h-96 items-center justify-center">
+                <p>Loading exam details...</p>
+            </div>
+        );
+    }
+
+    if (!exam) {
+        return (
+            <div className="container py-10">
+                <div className="flex flex-col items-center justify-center rounded-lg border border-dashed p-8 text-center">
+                    <h2 className="text-xl font-medium">Exam not found</h2>
+                    <p className="mt-2 text-muted-foreground">
+                        {
+                            "The exam you're looking for doesn't exist or you don't have access to it."
+                        }
+                    </p>
+                    <Button asChild className="mt-4">
+                        <Link href="/dashboard/exams">
+                            <ArrowLeft className="mr-2 h-4 w-4" />
+                            Back to Exams
+                        </Link>
+                    </Button>
+                </div>
+            </div>
+        );
+    }
+
+    return (
+        <div className="container max-w-4xl py-10">
+            <div className="mb-6 flex items-center">
+                <Button asChild variant="ghost" size="sm" className="mr-4">
+                    <Link href="/dashboard/exams">
+                        <ArrowLeft className="mr-2 h-4 w-4" />
+                        Back
+                    </Link>
+                </Button>
+                <div>
+                    <h1 className="text-3xl font-bold tracking-tight">
+                        {exam.title}
+                    </h1>
+                    <p className="mt-1 text-muted-foreground">
+                        Exam ID: {exam.id}
+                    </p>
+                </div>
+            </div>
+
+            <div className="mb-8 flex flex-wrap gap-4">
+                <Button asChild variant="outline">
+                    <Link href={`/dashboard/exams/${exam.id}/edit`}>
+                        <Pencil className="mr-2 h-4 w-4" />
+                        Edit Exam
+                    </Link>
+                </Button>
+                <Button asChild variant="outline">
+                    <Link href={`/dashboard/exams/${exam.id}/assign`}>
+                        <Users className="mr-2 h-4 w-4" />
+                        Assign to Students
+                    </Link>
+                </Button>
+
+                <StrictDeleteAlert onDelete={handleDeleteExam} />
+            </div>
+
+            <Card className="mb-8">
+                <CardHeader>
+                    <CardTitle>Exam Details</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                    <div>
+                        <h3 className="text-sm font-medium text-muted-foreground">
+                            Description
+                        </h3>
+                        <p className="mt-1">
+                            {exam.description || "No description provided"}
+                        </p>
+                    </div>
+
+                    <div className="grid gap-4 sm:grid-cols-2">
+                        <div>
+                            <h3 className="text-sm font-medium text-muted-foreground">
+                                Time Limit
+                            </h3>
+                            <div className="mt-1 flex items-center">
+                                <Clock className="mr-2 h-4 w-4 text-muted-foreground" />
+                                <span>{formatDuration(exam.timeLimit)}</span>
+                            </div>
+                        </div>
+
+                        <div>
+                            <h3 className="text-sm font-medium text-muted-foreground">
+                                Availability
+                            </h3>
+                            <div className="mt-1 flex items-center">
+                                <Calendar className="mr-2 h-4 w-4 text-muted-foreground" />
+                                <span>
+                                    {exam.availableFrom && exam.availableTo
+                                        ? `${formatDate(exam.availableFrom)} to ${formatDate(exam.availableTo)}`
+                                        : "No date restriction"}
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+                </CardContent>
+            </Card>
+
+            <div className="mb-6">
+                <div className="flex items-center justify-between">
+                    <h2 className="text-2xl font-bold">Questions</h2>
+                    <Button asChild variant="outline" size="sm">
+                        <Link
+                            href={`/dashboard/exams/${exam.id}/questions/add`}
+                        >
+                            Add Question
+                        </Link>
+                    </Button>
+                </div>
+            </div>
+
+            {exam.questions.length === 0 ? (
+                <div className="flex h-40 flex-col items-center justify-center rounded-lg border border-dashed p-6 text-center">
+                    <h3 className="text-lg font-medium">No Questions</h3>
+                    <p className="mt-2 text-muted-foreground">
+                        {"This exam doesn't have any questions yet."}
+                    </p>
+                    <Button
+                        asChild
+                        variant="secondary"
+                        className="mt-4"
+                        size="sm"
+                    >
+                        <Link
+                            href={`/dashboard/exams/${exam.id}/questions/add`}
+                        >
+                            Add Your First Question
+                        </Link>
+                    </Button>
+                </div>
+            ) : (
+                <div className="space-y-6">
+                    {exam.questions.map((question, index) => (
+                        <Card key={question.id} className="overflow-hidden">
+                            <CardHeader className="pb-3">
+                                <div className="flex items-center justify-between">
+                                    <CardTitle className="text-lg">
+                                        Question {index + 1}
+                                    </CardTitle>
+                                    <div className="flex items-center gap-2">
+                                        <Button
+                                            variant="ghost"
+                                            size="icon"
+                                            asChild
+                                        >
+                                            <Link
+                                                href={`/dashboard/exams/${exam.id}/questions/${question.id}/edit`}
+                                            >
+                                                <Pencil className="h-4 w-4" />
+                                            </Link>
+                                        </Button>
+                                        <AlertDialog
+                                            open={
+                                                deleteQuestionId === question.id
+                                            }
+                                            onOpenChange={(open) =>
+                                                !open &&
+                                                setDeleteQuestionId(null)
+                                            }
+                                        >
+                                            <AlertDialogTrigger asChild>
+                                                <Button
+                                                    variant="ghost"
+                                                    size="icon"
+                                                    onClick={() =>
+                                                        setDeleteQuestionId(
+                                                            question.id,
+                                                        )
+                                                    }
+                                                >
+                                                    <Trash2 className="h-4 w-4" />
+                                                </Button>
+                                            </AlertDialogTrigger>
+                                            <AlertDialogContent>
+                                                <AlertDialogHeader>
+                                                    <AlertDialogTitle>
+                                                        Delete Question
+                                                    </AlertDialogTitle>
+                                                    <AlertDialogDescription>
+                                                        Are you sure you want to
+                                                        delete this question?
+                                                        This action cannot be
+                                                        undone.
+                                                    </AlertDialogDescription>
+                                                </AlertDialogHeader>
+                                                <AlertDialogFooter>
+                                                    <AlertDialogCancel>
+                                                        Cancel
+                                                    </AlertDialogCancel>
+                                                    <AlertDialogAction
+                                                        onClick={() =>
+                                                            handleDeleteQuestion(
+                                                                question.id,
+                                                            )
+                                                        }
+                                                        className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                                                    >
+                                                        Delete
+                                                    </AlertDialogAction>
+                                                </AlertDialogFooter>
+                                            </AlertDialogContent>
+                                        </AlertDialog>
+                                    </div>
+                                </div>
+                                <CardDescription className="flex items-center">
+                                    <span className="mr-4 font-medium">
+                                        Type: {question.questionType}
+                                    </span>
+                                    <span className="font-medium">
+                                        {question.points} point
+                                        {question.points !== 1 && "s"}
+                                    </span>
+                                </CardDescription>
+                            </CardHeader>
+                            <Separator />
+                            <CardContent className="pt-4">
+                                <div
+                                    className="mb-4 whitespace-pre-wrap"
+                                    dangerouslySetInnerHTML={{
+                                        __html: question.questionText,
+                                    }}
+                                />
+
+                                {question.questionType === "multiple_choice" &&
+                                    question.options.length > 0 && (
+                                        <div className="space-y-3">
+                                            <h4 className="text-sm font-medium">
+                                                Options:
+                                            </h4>
+                                            <ul className="ml-6 space-y-2">
+                                                {question.options.map(
+                                                    (option) => (
+                                                        <li
+                                                            key={option.id}
+                                                            className={
+                                                                option.isCorrect
+                                                                    ? "font-medium text-primary"
+                                                                    : ""
+                                                            }
+                                                        >
+                                                            {option.optionText}
+                                                            {option.isCorrect &&
+                                                                " (Correct)"}
+                                                        </li>
+                                                    ),
+                                                )}
+                                            </ul>
+                                        </div>
+                                    )}
+                            </CardContent>
+                        </Card>
+                    ))}
+                </div>
+            )}
+        </div>
+    );
+}

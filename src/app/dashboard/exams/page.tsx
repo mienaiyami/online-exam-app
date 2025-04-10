@@ -89,9 +89,12 @@ export default function ExamsPage() {
                             </Button>
                         </div>
                     ) : (
-                        <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+                        <div className="flex flex-row flex-wrap gap-4">
                             {createdExams.data?.map((exam) => (
-                                <Card key={exam.id} className="overflow-hidden">
+                                <Card
+                                    key={exam.id}
+                                    className="w-80 overflow-hidden"
+                                >
                                     <CardHeader className="pb-4">
                                         <CardTitle className="line-clamp-1">
                                             {exam.title}
@@ -111,7 +114,15 @@ export default function ExamsPage() {
 
                                             <div className="flex items-center text-sm text-muted-foreground">
                                                 <Calendar className="mr-2 h-4 w-4" />
-                                                <span className="truncate">
+                                                <span
+                                                    className="truncate"
+                                                    title={
+                                                        exam.availableFrom &&
+                                                        exam.availableTo
+                                                            ? `${formatDate(exam.availableFrom)} to ${formatDate(exam.availableTo)}`
+                                                            : "No date restriction"
+                                                    }
+                                                >
                                                     {exam.availableFrom &&
                                                     exam.availableTo
                                                         ? `${formatDate(exam.availableFrom)} to ${formatDate(exam.availableTo)}`

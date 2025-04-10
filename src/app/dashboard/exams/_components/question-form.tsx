@@ -25,7 +25,7 @@ import {
     SelectValue,
 } from "@/components/ui/select";
 import { RichTextEditor } from "@/components/ui/rich-text-editor";
-import { type QuestionFormValues, questionFormSchema } from "../schema";
+import { type QuestionFormValues, questionFormSchema } from "../create/schema";
 
 type QuestionFormProps = {
     onSubmit: (values: QuestionFormValues) => void;

@@ -1,5 +1,5 @@
 import { z } from "zod";
-
+import dompurify from "dompurify";
 export const examFormSchema = z.object({
     title: z
         .string()
@@ -68,6 +68,12 @@ export const questionFormSchema = z
     .transform((data) => {
         if (data.questionType !== "multiple_choice") {
             data.options = undefined;
+        }
+        data.questionText = dompurify.sanitize(data.questionText);
+        if (data.options) {
+            data.options.forEach((option) => {
+                option.optionText = dompurify.sanitize(option.optionText);
+            });
         }
         return data;
     });

@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import { auth } from "@/server/auth";
 import { SignOutButton } from "@/components/auth/SignOutButton";
 import Link from "next/link";
+import ToggleTheme from "@/components/theme/ToggleTheme";
 
 export default async function DashboardLayout({
     children,
@@ -27,6 +28,7 @@ export default async function DashboardLayout({
                         <h1 className="text-xl font-bold">
                             <Link href="/">Online Exam Platform</Link>
                         </h1>
+                        <ToggleTheme />
                         <SignOutButton />
                     </div>
                 </header>
@@ -113,6 +115,7 @@ export default async function DashboardLayout({
                     <div className="flex items-center gap-4">
                         <span>{session.user.name}</span>
                         <SignOutButton />
+                        <ToggleTheme />
                     </div>
                 </header>
                 <main className="flex-1 p-6">{children}</main>
