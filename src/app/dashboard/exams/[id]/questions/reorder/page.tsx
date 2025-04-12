@@ -53,14 +53,14 @@ export default function ReorderQuestionsPage() {
 
     if (isLoading)
         return (
-            <div className="flex h-full items-center justify-center">
+            <div className="flex h-full items-center justify-center py-10">
                 <Loader2 className="h-10 w-10 animate-spin" />
             </div>
         );
 
-    if (!questions)
+    if (!questions || questions.length === 0)
         return (
-            <div className="flex h-full items-center justify-center">
+            <div className="flex h-full items-center justify-center py-10">
                 <p>No questions found</p>
             </div>
         );

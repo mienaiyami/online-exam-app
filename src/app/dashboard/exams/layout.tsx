@@ -7,7 +7,7 @@ type ExamsLayoutProps = {
 
 export default async function ExamsLayout({ children }: ExamsLayoutProps) {
     return (
-        <div className="flex min-h-screen flex-col">
+        <div className="flex flex-col">
             <header className="sticky top-0 z-10 border-b bg-background">
                 <ExamHeader />
             </header>

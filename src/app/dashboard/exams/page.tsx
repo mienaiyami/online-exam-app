@@ -51,18 +51,25 @@ export default function ExamsPage() {
                     </Button>
                 </div>
             ) : (
-                <div className="flex flex-row flex-wrap gap-4">
+                <div className="grid grid-cols-[repeat(auto-fill,minmax(20rem,1fr))] gap-4">
                     {createdExams.data?.map((exam) => (
-                        <Card key={exam.id} className="w-80 overflow-hidden">
+                        <Card
+                            key={exam.id}
+                            className="flex flex-col justify-between overflow-hidden"
+                        >
                             <CardHeader className="pb-4">
-                                <CardTitle className="flex items-center gap-2">
-                                    <span className="line-clamp-1">
+                                <CardTitle className="flex flex-col gap-2">
+                                    <Link
+                                        href={`/dashboard/exams/${exam.id}`}
+                                        className="truncate underline-offset-2 hover:underline"
+                                        title={exam.title}
+                                    >
                                         {exam.title}
-                                    </span>
+                                    </Link>
                                     {!exam.finalized && (
                                         <Badge
                                             variant="outline"
-                                            className="bg-warning text-warning-foreground"
+                                            className="w-fit bg-warning text-warning-foreground"
                                         >
                                             Pending Finalization
                                         </Badge>
@@ -70,7 +77,10 @@ export default function ExamsPage() {
                                 </CardTitle>
                             </CardHeader>
                             <CardContent>
-                                <p className="line-clamp-2 text-sm text-muted-foreground">
+                                <p
+                                    className="truncate text-sm text-muted-foreground"
+                                    title={exam.description || ""}
+                                >
                                     {exam.description ||
                                         "No description provided"}
                                 </p>
@@ -100,8 +110,8 @@ export default function ExamsPage() {
                                     </div>
                                 </div>
                             </CardContent>
-                            <Separator />
-                            <CardFooter className="p-2">
+                            <CardFooter className="flex flex-col gap-2 p-2">
+                                <Separator />
                                 <Button
                                     asChild
                                     variant="secondary"

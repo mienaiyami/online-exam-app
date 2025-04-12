@@ -23,7 +23,7 @@ import {
     SelectTrigger,
     SelectValue,
 } from "@/components/ui/select";
-import { RichTextEditor } from "@/components/ui/rich-text-editor";
+import RichTextEditor from "@/components/ui/rich-text-editor";
 import { type QuestionFormValues, questionFormSchema } from "../_hooks/schema";
 import { Label } from "@/components/ui/label";
 import { useEffect, useState } from "react";
@@ -60,7 +60,9 @@ export function QuestionForm({
     const [isDragging, setIsDragging] = useState(false);
 
     useEffect(() => {
-        setOptionOrder(options.map((e, i) => i));
+        if (options.length > 0) {
+            setOptionOrder(options.map((e, i) => i));
+        }
     }, [options]);
 
     const addOption = () => {
@@ -85,6 +87,8 @@ export function QuestionForm({
             currentOptions.filter((_, i) => i !== index),
         );
     };
+
+    console.log(form.formState.errors);
 
     return (
         <Form {...form}>
@@ -140,7 +144,13 @@ export function QuestionForm({
                                                 if (val !== "multiple_choice") {
                                                     form.setValue(
                                                         "options",
-                                                        undefined,
+                                                        [],
+                                                    );
+                                                }
+                                                if (val === "multiple_choice") {
+                                                    form.setValue(
+                                                        "options",
+                                                        defaultValues.options,
                                                     );
                                                 }
                                             }}
@@ -181,7 +191,6 @@ export function QuestionForm({
                                         <RichTextEditor
                                             value={field.value}
                                             onChange={field.onChange}
-                                            placeholder="Enter your question here..."
                                         />
                                     </FormControl>
                                     <FormMessage />
@@ -295,10 +304,10 @@ export function QuestionForm({
 
                                 {form.formState.errors.options && (
                                     <p className="text-sm font-medium text-destructive">
-                                        {
-                                            form.formState.errors.options.root
-                                                ?.message
-                                        }
+                                        {form.formState.errors.options.root
+                                            ?.message ||
+                                            form.formState.errors.options
+                                                .message}
                                     </p>
                                 )}
                             </div>

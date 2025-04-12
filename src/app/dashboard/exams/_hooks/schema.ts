@@ -46,14 +46,14 @@ export const questionFormSchema = z
             .optional()
             .refine(
                 (options) => {
-                    if (!options) return true;
+                    if (!options || options.length === 0) return true;
                     return options.some((option) => option.isCorrect);
                 },
-                { message: "At least one option must be marked as correct" },
+                { message: "At least 2 options must be marked as correct" },
             )
             .refine(
                 (options) => {
-                    if (!options) return true;
+                    if (!options || options.length === 0) return true;
                     return options.length >= 2;
                 },
                 { message: "Options are required" },
@@ -77,7 +77,7 @@ export const questionFormSchema = z
         }
         data.questionText = dompurify.sanitize(data.questionText);
         if (data.options) {
-            data.options.forEach((option, index) => {
+            data.options.forEach((option) => {
                 option.optionText = dompurify.sanitize(option.optionText);
             });
         }

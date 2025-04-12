@@ -84,7 +84,7 @@ export default function EditExamPage() {
     };
 
     return (
-        <div className="container max-w-4xl py-10">
+        <div className="py-4 sm:max-w-2xl">
             <div className="mb-6 flex items-center">
                 <div>
                     <h1 className="text-3xl font-bold tracking-tight">

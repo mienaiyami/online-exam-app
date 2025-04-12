@@ -46,8 +46,8 @@ export default async function DashboardLayout({
     }
 
     return (
-        <div className="flex min-h-screen">
-            <div className="w-64 border-r">
+        <div className="grid min-h-screen grid-cols-[16rem_1fr]">
+            <div className="w-full border-r">
                 <div className="p-4">
                     <h1 className="text-xl font-bold">
                         <Link href="/">Online Exam Platform</Link>
@@ -118,7 +118,7 @@ export default async function DashboardLayout({
                         <ToggleTheme />
                     </div>
                 </header>
-                <main className="flex-1 p-6">{children}</main>
+                <main className="w-full p-6">{children}</main>
             </div>
         </div>
     );

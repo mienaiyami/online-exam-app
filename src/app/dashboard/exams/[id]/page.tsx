@@ -129,9 +129,12 @@ export default function ExamDetailPage() {
     }
 
     return (
-        <div className="container max-w-4xl py-10">
-            <div className="mb-6 flex flex-col gap-2 px-2">
-                <h1 className="text-3xl font-bold tracking-tight">
+        <div className="py-4 sm:max-w-2xl">
+            <div className="mb-6 flex flex-col gap-2">
+                <h1
+                    title={exam.title}
+                    className="truncate text-3xl font-bold tracking-tight"
+                >
                     {exam.title}
                 </h1>
                 <p className="mt-1 text-muted-foreground">Exam ID: {exam.id}</p>
@@ -162,7 +165,7 @@ export default function ExamDetailPage() {
             </div>
 
             <Card className="mb-8">
-                <CardHeader>
+                <CardHeader className="pb-4">
                     <CardTitle>Exam Details</CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-4">
@@ -170,7 +173,7 @@ export default function ExamDetailPage() {
                         <h3 className="text-sm font-medium text-muted-foreground">
                             Description
                         </h3>
-                        <p className="mt-1">
+                        <p className="mt-1 whitespace-pre-line text-pretty">
                             {exam.description || "No description provided"}
                         </p>
                     </div>
@@ -335,7 +338,7 @@ export default function ExamDetailPage() {
                             <Separator />
                             <CardContent className="py-4">
                                 <div
-                                    className="mb-4 whitespace-pre-wrap"
+                                    className="tiptap mb-4 rounded-md bg-muted/50 p-2"
                                     dangerouslySetInnerHTML={{
                                         __html: question.questionText,
                                     }}
@@ -347,16 +350,16 @@ export default function ExamDetailPage() {
                                             <h4 className="text-sm font-medium">
                                                 Options:
                                             </h4>
-                                            <ul className="ml-6 space-y-2">
+                                            <ol className="ml-6 list-decimal space-y-2">
                                                 {question.options.map(
                                                     (option) => (
                                                         <li
                                                             key={option.id}
-                                                            className={
+                                                            className={`tiptap rounded-md bg-muted/50 p-2 ${
                                                                 option.isCorrect
-                                                                    ? "font-medium text-primary"
+                                                                    ? "bg-primary/10"
                                                                     : ""
-                                                            }
+                                                            }`}
                                                         >
                                                             {option.optionText}
                                                             {option.isCorrect &&
@@ -364,7 +367,7 @@ export default function ExamDetailPage() {
                                                         </li>
                                                     ),
                                                 )}
-                                            </ul>
+                                            </ol>
                                         </div>
                                     )}
                             </CardContent>
