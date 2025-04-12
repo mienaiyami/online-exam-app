@@ -19,6 +19,8 @@ export const env = createEnv({
             .default("development"),
         GITHUB_CLIENT_ID: z.string(),
         GITHUB_CLIENT_SECRET: z.string(),
+        GOOGLE_CLIENT_ID: z.string(),
+        GOOGLE_CLIENT_SECRET: z.string(),
     },
 
     /**
@@ -42,6 +44,8 @@ export const env = createEnv({
         NODE_ENV: process.env.NODE_ENV,
         GITHUB_CLIENT_ID: process.env.AUTH_GITHUB_ID,
         GITHUB_CLIENT_SECRET: process.env.AUTH_GITHUB_SECRET,
+        GOOGLE_CLIENT_ID: process.env.AUTH_GOOGLE_ID,
+        GOOGLE_CLIENT_SECRET: process.env.AUTH_GOOGLE_SECRET,
     },
     /**
      * Run `build` or `dev` with `SKIP_ENV_VALIDATION` to skip env validation. This is especially

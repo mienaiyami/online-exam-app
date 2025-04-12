@@ -5,7 +5,6 @@ import { useTheme } from "next-themes";
 
 const ToggleTheme = () => {
     const { setTheme, theme } = useTheme();
-    console.log(theme);
     return (
         <Button
             variant={"outline"}

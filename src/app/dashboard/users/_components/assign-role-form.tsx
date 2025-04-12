@@ -19,7 +19,7 @@ export function AssignRoleForm({ userId }: { userId: string }) {
     >("student");
     const router = useRouter();
     const utils = api.useUtils();
-    const userRoles = api.user.getCurrentUserRoles.useQuery(undefined, {
+    const userRoles = api.user.getUserRoles.useQuery(userId, {
         select(data) {
             return data.map((role) => role.role);
         },
@@ -36,7 +36,7 @@ export function AssignRoleForm({ userId }: { userId: string }) {
         },
     });
     const removeRole = api.user.removeRole.useMutation({
-        onSuccess: (data) => {
+        onSuccess: () => {
             router.refresh();
             toast.success("Role removed successfully");
             void utils.user.invalidate();
@@ -65,7 +65,7 @@ export function AssignRoleForm({ userId }: { userId: string }) {
     return (
         <form
             onSubmit={handleSubmit}
-            className="flex flex-col gap-2 sm:flex-row"
+            className="mt-2 flex flex-row items-center gap-2"
         >
             <Select
                 value={selectedRole}

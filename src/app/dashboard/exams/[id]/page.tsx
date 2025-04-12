@@ -204,8 +204,20 @@ export default function ExamDetailPage() {
             </Card>
 
             <div className="mb-6">
-                <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
                     <h2 className="text-2xl font-bold">Questions</h2>
+                    <Button
+                        asChild
+                        variant="outline"
+                        size="sm"
+                        className="ml-auto"
+                    >
+                        <Link
+                            href={`/dashboard/exams/${exam.id}/questions/reorder`}
+                        >
+                            Reorder Questions
+                        </Link>
+                    </Button>
                     <Button asChild variant="outline" size="sm">
                         <Link
                             href={`/dashboard/exams/${exam.id}/questions/add`}

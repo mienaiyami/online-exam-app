@@ -13,6 +13,7 @@ import {
     verificationTokens,
 } from "@/server/db/schema";
 import { eq } from "drizzle-orm";
+import { env } from "@/env";
 
 declare module "next-auth" {
     interface Session extends DefaultSession {
@@ -39,7 +40,10 @@ export const authConfig = {
     providers: [
         // DiscordProvider
         GitHubProvider,
-        // GoogleProvider
+        GoogleProvider({
+            clientId: env.GOOGLE_CLIENT_ID,
+            clientSecret: env.GOOGLE_CLIENT_SECRET,
+        }),
     ],
     adapter: DrizzleAdapter(db, {
         usersTable: users,
@@ -61,6 +65,21 @@ export const authConfig = {
                     roles,
                 },
             };
+        },
+        signIn: async ({ user }) => {
+            if (!user.id) {
+                return false;
+            }
+            const existingRole = await db.query.userRoles.findMany({
+                where: eq(userRoles.userId, user.id),
+            });
+            if (existingRole.length === 0) {
+                await db.insert(userRoles).values({
+                    role: "student",
+                    userId: user.id,
+                });
+            }
+            return true;
         },
     },
 } satisfies NextAuthConfig;

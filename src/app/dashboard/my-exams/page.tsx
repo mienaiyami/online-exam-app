@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { Clock, Calendar, PlusCircle, FileEdit } from "lucide-react";
+import { Clock, Calendar } from "lucide-react";
 
 import {
     Card,
@@ -14,59 +14,43 @@ import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 
 import { api } from "@/trpc/react";
-import { Badge } from "@/components/ui/badge";
 import { formatDuration } from "@/lib/utils";
 import { formatDate } from "@/lib/utils";
 
-export default function ExamsPage() {
-    const createdExams = api.exam.getCreatedExams.useQuery(undefined, {
+export default function MyExamsPage() {
+    const assignedExams = api.exam.getAssignedExams.useQuery(undefined, {
         refetchOnMount: true,
     });
-
     return (
-        <div className="container p-6">
+        <div className="container">
             <div className="mb-6">
+                <h1 className="text-2xl font-bold tracking-tight">
+                    Your Exams
+                </h1>
                 <p className="mt-2 text-muted-foreground">
-                    View and manage all of your exams
+                    Exams Assigned to You
                 </p>
             </div>
-
-            {createdExams.isLoading ? (
+            {assignedExams.isLoading ? (
                 <div className="flex h-52 items-center justify-center">
-                    <p>Loading exams...</p>
+                    <p>Loading assigned exams...</p>
                 </div>
-            ) : createdExams.data?.length === 0 ? (
+            ) : assignedExams.data?.length === 0 ? (
                 <div className="flex h-52 flex-col items-center justify-center rounded-lg border border-dashed p-8 text-center">
                     <h3 className="text-lg font-medium">
-                        No Exams Created Yet
+                        No Exams Assigned to You Yet
                     </h3>
                     <p className="mt-2 text-muted-foreground">
-                        Get started by creating your first exam.
+                        Check back later for assigned exams.
                     </p>
-                    <Button asChild className="mt-4">
-                        <Link href="/dashboard/exams/create">
-                            <PlusCircle className="mr-2 h-4 w-4" />
-                            Create Exam
-                        </Link>
-                    </Button>
                 </div>
             ) : (
-                <div className="flex flex-row flex-wrap gap-4">
-                    {createdExams.data?.map((exam) => (
-                        <Card key={exam.id} className="w-80 overflow-hidden">
+                <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+                    {assignedExams.data?.map((exam) => (
+                        <Card key={exam.id} className="overflow-hidden">
                             <CardHeader className="pb-4">
-                                <CardTitle className="flex items-center gap-2">
-                                    <span className="line-clamp-1">
-                                        {exam.title}
-                                    </span>
-                                    {!exam.finalized && (
-                                        <Badge
-                                            variant="outline"
-                                            className="bg-warning text-warning-foreground"
-                                        >
-                                            Pending Finalization
-                                        </Badge>
-                                    )}
+                                <CardTitle className="line-clamp-1">
+                                    {exam.title}
                                 </CardTitle>
                             </CardHeader>
                             <CardContent>
@@ -83,15 +67,7 @@ export default function ExamsPage() {
 
                                     <div className="flex items-center text-sm text-muted-foreground">
                                         <Calendar className="mr-2 h-4 w-4" />
-                                        <span
-                                            className="truncate"
-                                            title={
-                                                exam.availableFrom &&
-                                                exam.availableTo
-                                                    ? `${formatDate(exam.availableFrom)} to ${formatDate(exam.availableTo)}`
-                                                    : "No date restriction"
-                                            }
-                                        >
+                                        <span className="truncate">
                                             {exam.availableFrom &&
                                             exam.availableTo
                                                 ? `${formatDate(exam.availableFrom)} to ${formatDate(exam.availableTo)}`
@@ -101,15 +77,16 @@ export default function ExamsPage() {
                                 </div>
                             </CardContent>
                             <Separator />
-                            <CardFooter className="p-2">
+                            <CardFooter className="pt-4">
                                 <Button
                                     asChild
-                                    variant="secondary"
+                                    variant="default"
                                     className="w-full"
                                 >
-                                    <Link href={`/dashboard/exams/${exam.id}`}>
-                                        <FileEdit className="mr-2 h-4 w-4" />
-                                        View Details
+                                    <Link
+                                        href={`/dashboard/exams/take/${exam.id}`}
+                                    >
+                                        Take Exam
                                     </Link>
                                 </Button>
                             </CardFooter>

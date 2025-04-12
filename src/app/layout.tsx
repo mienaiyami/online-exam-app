@@ -22,7 +22,7 @@ export default function RootLayout({
             className={`${GeistSans.variable}`}
             suppressHydrationWarning
         >
-            <body>
+            <body className="cursor-default">
                 <TRPCReactProvider>
                     <ThemeProvider
                         attribute="class"

@@ -24,12 +24,12 @@ export default async function DashboardLayout({
         return (
             <div className="flex min-h-screen flex-col">
                 <header className="border-b">
-                    <div className="container mx-auto flex h-16 w-full items-center justify-between md:px-10">
+                    <div className="container mx-auto flex h-16 w-full items-center justify-between gap-2 md:px-10">
                         <h1 className="text-xl font-bold">
                             <Link href="/">Online Exam Platform</Link>
                         </h1>
-                        <ToggleTheme />
                         <SignOutButton />
+                        <ToggleTheme />
                     </div>
                 </header>
                 <main className="container mx-auto flex-1 py-10">
@@ -112,7 +112,7 @@ export default async function DashboardLayout({
 
             <div className="flex flex-1 flex-col">
                 <header className="flex h-16 items-center justify-end border-b px-6">
-                    <div className="flex items-center gap-4">
+                    <div className="flex items-center gap-2">
                         <span>{session.user.name}</span>
                         <SignOutButton />
                         <ToggleTheme />

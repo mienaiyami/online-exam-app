@@ -1,22 +1,23 @@
 import { z } from "zod";
 import { createTRPCRouter, protectedProcedure } from "@/server/api/trpc";
 import { users, userRoles } from "@/server/db/schema";
-import { eq, and } from "drizzle-orm";
+import { eq, and, like, desc, or } from "drizzle-orm";
 import { TRPCError } from "@trpc/server";
+import { isAdminOrInstructor, isAdmin } from "../utils/access";
+
+const userColumns = {
+    email: true,
+    id: true,
+    image: true,
+    name: true,
+} as const;
 
 export const userRouter = createTRPCRouter({
     getAll: protectedProcedure.query(async ({ ctx }) => {
-        const userRole = await ctx.db.query.userRoles.findFirst({
-            where: and(
-                eq(userRoles.userId, ctx.session.user.id),
-                eq(userRoles.role, "admin"),
-            ),
-        });
-
-        if (!userRole) {
+        if (!(await isAdminOrInstructor(ctx))) {
             throw new TRPCError({
                 code: "FORBIDDEN",
-                message: "Only admins can view all users",
+                message: "Only admins or instructors can view all users",
             });
         }
 
@@ -27,22 +28,52 @@ export const userRouter = createTRPCRouter({
         });
     }),
 
+    search: protectedProcedure
+        .input(
+            z.object({
+                query: z.string(),
+            }),
+        )
+        .query(async ({ ctx, input }) => {
+            if (!(await isAdminOrInstructor(ctx))) {
+                throw new TRPCError({
+                    code: "FORBIDDEN",
+                    message: "Only admins or instructors can search users",
+                });
+            }
+            return await ctx.db.query.users.findMany({
+                where: or(
+                    like(users.email, `%${input.query}%`),
+                    like(users.name, `%${input.query}%`),
+                ),
+                limit: 20,
+                orderBy: [desc(users.email)],
+                columns: userColumns,
+                with: {
+                    roles: {
+                        columns: {
+                            role: true,
+                        },
+                    },
+                },
+            });
+        }),
+    getById: protectedProcedure
+        .input(z.string())
+        .query(async ({ ctx, input }) => {
+            if (!(await isAdminOrInstructor(ctx))) {
+                throw new TRPCError({
+                    code: "FORBIDDEN",
+                    message: "Only admins or instructors can view user details",
+                });
+            }
+            return await ctx.db.query.users.findFirst({
+                where: eq(users.id, input),
+                columns: userColumns,
+            });
+        }),
     getStudents: protectedProcedure.query(async ({ ctx }) => {
-        const userRole = await ctx.db.query.userRoles.findFirst({
-            where: and(
-                eq(userRoles.userId, ctx.session.user.id),
-                eq(userRoles.role, "instructor"),
-            ),
-        });
-
-        const isAdmin = await ctx.db.query.userRoles.findFirst({
-            where: and(
-                eq(userRoles.userId, ctx.session.user.id),
-                eq(userRoles.role, "admin"),
-            ),
-        });
-
-        if (!userRole && !isAdmin) {
+        if (!(await isAdminOrInstructor(ctx))) {
             throw new TRPCError({
                 code: "FORBIDDEN",
                 message: "Only instructors or admins can view students",
@@ -59,6 +90,20 @@ export const userRouter = createTRPCRouter({
         return studentRoles.map((role) => role.user);
     }),
 
+    getUserRoles: protectedProcedure
+        .input(z.string())
+        .query(async ({ ctx, input }) => {
+            if (!(await isAdmin(ctx))) {
+                throw new TRPCError({
+                    code: "FORBIDDEN",
+                    message: "Only admins can view user roles",
+                });
+            }
+            return await ctx.db.query.userRoles.findMany({
+                where: eq(userRoles.userId, input),
+            });
+        }),
+
     assignRole: protectedProcedure
         .input(
             z.object({
@@ -67,14 +112,7 @@ export const userRouter = createTRPCRouter({
             }),
         )
         .mutation(async ({ ctx, input }) => {
-            const userRole = await ctx.db.query.userRoles.findFirst({
-                where: and(
-                    eq(userRoles.userId, ctx.session.user.id),
-                    eq(userRoles.role, "admin"),
-                ),
-            });
-
-            if (!userRole) {
+            if (!(await isAdmin(ctx))) {
                 throw new TRPCError({
                     code: "FORBIDDEN",
                     message: "Only admins can assign roles",
@@ -110,14 +148,7 @@ export const userRouter = createTRPCRouter({
             }),
         )
         .mutation(async ({ ctx, input }) => {
-            const userRole = await ctx.db.query.userRoles.findFirst({
-                where: and(
-                    eq(userRoles.userId, ctx.session.user.id),
-                    eq(userRoles.role, "admin"),
-                ),
-            });
-
-            if (!userRole) {
+            if (!(await isAdmin(ctx))) {
                 throw new TRPCError({
                     code: "FORBIDDEN",
                     message: "Only admins can remove roles",
@@ -137,8 +168,9 @@ export const userRouter = createTRPCRouter({
         }),
 
     getCurrentUserRoles: protectedProcedure.query(async ({ ctx }) => {
-        return await ctx.db.query.userRoles.findMany({
+        const roles = await ctx.db.query.userRoles.findMany({
             where: eq(userRoles.userId, ctx.session.user.id),
         });
+        return roles;
     }),
 });
