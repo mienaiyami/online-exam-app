@@ -37,6 +37,8 @@ import {
     AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { StrictDeleteAlert } from "../_components/strict-delete-alert";
+import { useFinalizeExam } from "../_hooks/finalize-exam";
+import { useDeleteQuestion } from "../_hooks/delete-question";
 
 export default function ExamDetailPage() {
     const router = useRouter();
@@ -46,22 +48,33 @@ export default function ExamDetailPage() {
     const [deleteQuestionId, setDeleteQuestionId] = React.useState<
         number | null
     >(null);
+    const utils = api.useUtils();
 
-    const {
-        data: exam,
-        isLoading,
-        refetch,
-    } = api.exam.getById.useQuery(
+    const { data: exam, isLoading } = api.exam.getById.useQuery(
         { examId },
         {
             enabled: !isNaN(examId),
-            refetchOnWindowFocus: false,
+            retry: false,
         },
     );
+    const { mutate: finalizeExam } = useFinalizeExam();
+
+    const handleFinalize = () => {
+        if (!exam) return;
+        if (exam.questions.length === 0) {
+            toast.error("Please add at least one question to the exam.");
+            return;
+        }
+
+        finalizeExam({
+            examId: exam.id,
+        });
+    };
 
     const deleteExamMutation = api.exam.deleteExam.useMutation({
-        onSuccess: () => {
+        onSuccess: async () => {
             toast.success("Exam deleted successfully");
+            void utils.exam.invalidate();
             router.push("/dashboard/exams");
         },
         onError: (error) => {
@@ -69,15 +82,8 @@ export default function ExamDetailPage() {
         },
     });
 
-    const deleteQuestionMutation = api.exam.deleteQuestion.useMutation({
-        onSuccess: () => {
-            toast.success("Question deleted successfully");
-            void refetch();
-            setDeleteQuestionId(null);
-        },
-        onError: (error) => {
-            toast.error(`Failed to delete question: ${error.message}`);
-        },
+    const { mutate: deleteQuestion } = useDeleteQuestion(() => {
+        setDeleteQuestionId(null);
     });
 
     const formatDuration = (minutes: number) => {
@@ -99,10 +105,6 @@ export default function ExamDetailPage() {
         deleteExamMutation.mutate({ examId: exam.id });
     };
 
-    const handleDeleteQuestion = (questionId: number) => {
-        deleteQuestionMutation.mutate({ questionId });
-    };
-
     if (isLoading) {
         return (
             <div className="container flex h-96 items-center justify-center">
@@ -121,12 +123,6 @@ export default function ExamDetailPage() {
                             "The exam you're looking for doesn't exist or you don't have access to it."
                         }
                     </p>
-                    <Button asChild className="mt-4">
-                        <Link href="/dashboard/exams">
-                            <ArrowLeft className="mr-2 h-4 w-4" />
-                            Back to Exams
-                        </Link>
-                    </Button>
                 </div>
             </div>
         );
@@ -134,36 +130,33 @@ export default function ExamDetailPage() {
 
     return (
         <div className="container max-w-4xl py-10">
-            <div className="mb-6 flex items-center">
-                <Button asChild variant="ghost" size="sm" className="mr-4">
-                    <Link href="/dashboard/exams">
-                        <ArrowLeft className="mr-2 h-4 w-4" />
-                        Back
-                    </Link>
-                </Button>
-                <div>
-                    <h1 className="text-3xl font-bold tracking-tight">
-                        {exam.title}
-                    </h1>
-                    <p className="mt-1 text-muted-foreground">
-                        Exam ID: {exam.id}
-                    </p>
-                </div>
+            <div className="mb-6 flex flex-col gap-2 px-2">
+                <h1 className="text-3xl font-bold tracking-tight">
+                    {exam.title}
+                </h1>
+                <p className="mt-1 text-muted-foreground">Exam ID: {exam.id}</p>
             </div>
 
-            <div className="mb-8 flex flex-wrap gap-4">
+            <div className="mb-8 flex flex-wrap gap-2">
                 <Button asChild variant="outline">
                     <Link href={`/dashboard/exams/${exam.id}/edit`}>
                         <Pencil className="mr-2 h-4 w-4" />
                         Edit Exam
                     </Link>
                 </Button>
-                <Button asChild variant="outline">
-                    <Link href={`/dashboard/exams/${exam.id}/assign`}>
-                        <Users className="mr-2 h-4 w-4" />
-                        Assign to Students
-                    </Link>
-                </Button>
+
+                {exam.finalized ? (
+                    <Button asChild variant="outline">
+                        <Link href={`/dashboard/exams/${exam.id}/assign`}>
+                            <Users className="mr-2 h-4 w-4" />
+                            Assign to Students
+                        </Link>
+                    </Button>
+                ) : (
+                    <Button variant="outline" onClick={handleFinalize}>
+                        Finalize Exam
+                    </Button>
+                )}
 
                 <StrictDeleteAlert onDelete={handleDeleteExam} />
             </div>
@@ -246,7 +239,7 @@ export default function ExamDetailPage() {
                 <div className="space-y-6">
                     {exam.questions.map((question, index) => (
                         <Card key={question.id} className="overflow-hidden">
-                            <CardHeader className="pb-3">
+                            <CardHeader className="py-3">
                                 <div className="flex items-center justify-between">
                                     <CardTitle className="text-lg">
                                         Question {index + 1}
@@ -303,9 +296,10 @@ export default function ExamDetailPage() {
                                                     </AlertDialogCancel>
                                                     <AlertDialogAction
                                                         onClick={() =>
-                                                            handleDeleteQuestion(
-                                                                question.id,
-                                                            )
+                                                            deleteQuestion({
+                                                                questionId:
+                                                                    question.id,
+                                                            })
                                                         }
                                                         className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
                                                     >
@@ -327,7 +321,7 @@ export default function ExamDetailPage() {
                                 </CardDescription>
                             </CardHeader>
                             <Separator />
-                            <CardContent className="pt-4">
+                            <CardContent className="py-4">
                                 <div
                                     className="mb-4 whitespace-pre-wrap"
                                     dangerouslySetInnerHTML={{

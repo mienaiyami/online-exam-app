@@ -1,15 +1,14 @@
 "use client";
 
-import * as React from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { PlusCircle, Trash2, GripVertical } from "lucide-react";
+import { Reorder, useDragControls } from "motion/react";
 
 import { Button } from "@/components/ui/button";
 import {
     Form,
     FormControl,
-    FormDescription,
     FormField,
     FormItem,
     FormLabel,
@@ -25,7 +24,9 @@ import {
     SelectValue,
 } from "@/components/ui/select";
 import { RichTextEditor } from "@/components/ui/rich-text-editor";
-import { type QuestionFormValues, questionFormSchema } from "../create/schema";
+import { type QuestionFormValues, questionFormSchema } from "../_hooks/schema";
+import { Label } from "@/components/ui/label";
+import { useEffect, useState } from "react";
 
 type QuestionFormProps = {
     onSubmit: (values: QuestionFormValues) => void;
@@ -41,8 +42,8 @@ export function QuestionForm({
         points: 1,
         orderIndex: 0,
         options: [
-            { optionText: "", isCorrect: false, orderIndex: 0 },
-            { optionText: "", isCorrect: false, orderIndex: 1 },
+            { optionText: "", isCorrect: true },
+            { optionText: "", isCorrect: false },
         ],
     },
     questionIndex,
@@ -55,6 +56,12 @@ export function QuestionForm({
     const questionType = form.watch("questionType");
 
     const options = form.watch("options") ?? [];
+    const [optionOrder, setOptionOrder] = useState(options.map((e, i) => i));
+    const [isDragging, setIsDragging] = useState(false);
+
+    useEffect(() => {
+        setOptionOrder(options.map((e, i) => i));
+    }, [options]);
 
     const addOption = () => {
         const currentOptions = form.getValues("options") ?? [];
@@ -63,28 +70,27 @@ export function QuestionForm({
             {
                 optionText: "",
                 isCorrect: false,
-                orderIndex: currentOptions.length,
             },
         ]);
+    };
+    const setFormOptionsOrder = (order: number[]) => {
+        const newOptions = order.map((e) => options[e]!);
+        form.setValue("options", newOptions);
     };
 
     const removeOption = (index: number) => {
         const currentOptions = form.getValues("options") ?? [];
         form.setValue(
             "options",
-            currentOptions
-                .filter((_, i) => i !== index)
-                .map((option, i) => ({ ...option, orderIndex: i })),
+            currentOptions.filter((_, i) => i !== index),
         );
     };
-
-    console.log(form.formState.errors);
 
     return (
         <Form {...form}>
             <form
                 onSubmit={form.handleSubmit(onSubmit)}
-                className="space-y-6"
+                className="select-none space-y-6"
                 ref={(node) => {
                     node?.scrollIntoView({ behavior: "smooth" });
                 }}
@@ -99,11 +105,11 @@ export function QuestionForm({
                                 control={form.control}
                                 name="points"
                                 render={({ field }) => (
-                                    <FormItem className="flex flex-row items-center space-x-2">
+                                    <FormItem className="flex flex-row items-center gap-2 space-y-0">
                                         <FormLabel className="text-sm">
                                             Points:
                                         </FormLabel>
-                                        <FormControl>
+                                        <FormControl className="">
                                             <Input
                                                 type="number"
                                                 min={1}
@@ -111,7 +117,9 @@ export function QuestionForm({
                                                 {...field}
                                                 onChange={(e) =>
                                                     field.onChange(
-                                                        Number(e.target.value),
+                                                        Number(
+                                                            e.target.value,
+                                                        ) || 0,
                                                     )
                                                 }
                                             />
@@ -197,23 +205,43 @@ export function QuestionForm({
                                     </Button>
                                 </div>
 
-                                <div className="space-y-3">
-                                    {options.map((_, index) => (
-                                        <div
-                                            key={index}
+                                <Reorder.Group
+                                    axis="y"
+                                    values={optionOrder}
+                                    onReorder={setOptionOrder}
+                                    className="space-y-3"
+                                >
+                                    {optionOrder.map((order) => (
+                                        <Reorder.Item
+                                            key={order}
+                                            value={order}
+                                            transition={{
+                                                duration: isDragging ? 0.2 : 0,
+                                            }}
+                                            onDragStart={() =>
+                                                setIsDragging(true)
+                                            }
+                                            onDragEnd={() => {
+                                                setFormOptionsOrder(
+                                                    optionOrder,
+                                                );
+                                                setIsDragging(false);
+                                            }}
                                             className="flex items-start space-x-2 rounded-md border p-3"
                                         >
-                                            <GripVertical className="mt-2 h-5 w-5 text-muted-foreground" />
+                                            <div className="cursor-grab">
+                                                <GripVertical className="mt-2 h-5 w-5 text-muted-foreground" />
+                                            </div>
 
                                             <div className="flex-1 space-y-3">
                                                 <FormField
                                                     control={form.control}
-                                                    name={`options.${index}.optionText`}
+                                                    name={`options.${order}.optionText`}
                                                     render={({ field }) => (
                                                         <FormItem>
                                                             <FormControl>
                                                                 <Input
-                                                                    placeholder={`Option ${index + 1}`}
+                                                                    placeholder={`Option ${order + 1}`}
                                                                     {...field}
                                                                 />
                                                             </FormControl>
@@ -226,11 +254,11 @@ export function QuestionForm({
                                             <div className="flex items-center space-x-2 self-center">
                                                 <FormField
                                                     control={form.control}
-                                                    name={`options.${index}.isCorrect`}
+                                                    name={`options.${order}.isCorrect`}
                                                     render={({ field }) => (
                                                         <FormItem>
                                                             <FormControl>
-                                                                <div className="flex items-center space-x-2">
+                                                                <Label className="flex cursor-pointer items-center gap-2 text-sm font-medium">
                                                                     <Checkbox
                                                                         checked={
                                                                             field.value
@@ -238,15 +266,9 @@ export function QuestionForm({
                                                                         onCheckedChange={
                                                                             field.onChange
                                                                         }
-                                                                        id={`option-${index}-correct`}
                                                                     />
-                                                                    <label
-                                                                        htmlFor={`option-${index}-correct`}
-                                                                        className="text-sm font-medium"
-                                                                    >
-                                                                        Correct
-                                                                    </label>
-                                                                </div>
+                                                                    Correct
+                                                                </Label>
                                                             </FormControl>
                                                             <FormMessage />
                                                         </FormItem>
@@ -258,7 +280,7 @@ export function QuestionForm({
                                                     variant="ghost"
                                                     size="icon"
                                                     onClick={() =>
-                                                        removeOption(index)
+                                                        removeOption(order)
                                                     }
                                                     disabled={
                                                         options.length <= 2
@@ -267,13 +289,16 @@ export function QuestionForm({
                                                     <Trash2 className="h-4 w-4" />
                                                 </Button>
                                             </div>
-                                        </div>
+                                        </Reorder.Item>
                                     ))}
-                                </div>
+                                </Reorder.Group>
 
                                 {form.formState.errors.options && (
                                     <p className="text-sm font-medium text-destructive">
-                                        {form.formState.errors.options.message}
+                                        {
+                                            form.formState.errors.options.root
+                                                ?.message
+                                        }
                                     </p>
                                 )}
                             </div>
@@ -282,7 +307,14 @@ export function QuestionForm({
                 </div>
 
                 <div className="flex justify-end">
-                    <Button type="submit">Save Question</Button>
+                    <Button
+                        type="submit"
+                        disabled={form.formState.isSubmitting}
+                    >
+                        {form.formState.isSubmitting
+                            ? "Saving..."
+                            : "Save Question"}
+                    </Button>
                 </div>
             </form>
         </Form>

@@ -37,6 +37,9 @@ export function StrictDeleteAlert({ onDelete }: { onDelete: () => void }) {
                         type="text"
                         placeholder="Type 'delete' to confirm"
                         value={input}
+                        ref={(node) => {
+                            node?.focus();
+                        }}
                         onChange={(e) => setInput(e.target.value)}
                         onKeyDown={(e) => {
                             if (e.key === "Enter" && input === "delete") {

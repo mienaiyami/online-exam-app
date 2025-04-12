@@ -26,7 +26,7 @@ import {
 } from "@/components/ui/popover";
 import { cn } from "@/lib/utils";
 
-import { type ExamFormValues, examFormSchema } from "../create/schema";
+import { type ExamFormValues, examFormSchema } from "../_hooks/schema";
 
 type ExamDetailsFormProps = {
     onSubmit: (values: ExamFormValues) => void;

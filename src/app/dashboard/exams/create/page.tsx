@@ -22,15 +22,17 @@ import {
 import { api } from "@/trpc/react";
 import { ExamDetailsForm } from "../_components/exam-details-form";
 import { QuestionForm } from "../_components/question-form";
-import type { ExamFormValues, QuestionFormValues } from "./schema";
+import type { ExamFormValues, QuestionFormValues } from "../_hooks/schema";
+import { useFinalizeExam } from "../_hooks/finalize-exam";
+import { useCreateQuestion } from "../_hooks/create-question";
+import { useUpdateQuestion } from "../_hooks/update-question";
+import { useDeleteQuestion } from "../_hooks/delete-question";
 
 type QuestionWithId = QuestionFormValues & { id?: number };
 
 export default function CreateExamPage() {
-    const router = useRouter();
     const [step, setStep] = React.useState<"details" | "questions">("details");
     const [examId, setExamId] = React.useState<number | null>(null);
-    const [questions, setQuestions] = React.useState<QuestionWithId[]>([]);
     const [currentQuestion, setCurrentQuestion] =
         React.useState<QuestionWithId | null>(null);
     const [examData, setExamData] = React.useState<ExamFormValues | null>(null);
@@ -39,64 +41,35 @@ export default function CreateExamPage() {
     const [deletingIndex, setDeletingIndex] = React.useState<number | null>(
         null,
     );
+    const utils = api.useUtils();
+    const { data: questions = [] } = api.exam.getQuestions.useQuery({
+        examId,
+    });
 
     const createExamMutation = api.exam.create.useMutation({
         onSuccess: (data) => {
             setExamId(data.id);
             setStep("questions");
+            void utils.exam.invalidate();
             toast.success("Exam details saved successfully!");
         },
         onError: (error) => {
             toast.error(`Failed to create exam: ${error.message}`);
         },
     });
-
-    const addQuestionMutation = api.exam.addQuestion.useMutation({
-        onSuccess: (data) => {
-            toast.success("Question added successfully!");
-
-            setQuestions((prev) =>
-                prev.map((q, index) =>
-                    index === prev.length - 1 ? { ...q, id: data.id } : q,
-                ),
-            );
-
-            setCurrentQuestion(null);
-        },
-        onError: (error) => {
-            toast.error(`Failed to add question: ${error.message}`);
-        },
+    const { mutate: finalizeExam } = useFinalizeExam();
+    const { mutate: addQuestion } = useCreateQuestion(() => {
+        setCurrentQuestion(null);
     });
 
-    const updateQuestionMutation = api.exam.updateQuestion.useMutation({
-        onSuccess: () => {
-            toast.success("Question updated successfully!");
-            setEditingIndex(null);
-            setCurrentQuestion(null);
-        },
-        onError: (error) => {
-            toast.error(`Failed to update question: ${error.message}`);
-        },
+    const { mutate: updateQuestion } = useUpdateQuestion(() => {
+        setEditingIndex(null);
+        setCurrentQuestion(null);
     });
 
-    const deleteQuestionMutation = api.exam.deleteQuestion.useMutation({
-        onSuccess: () => {
-            toast.success("Question deleted successfully!");
-
-            if (deletingIndex !== null) {
-                setQuestions((prev) =>
-                    prev
-                        .filter((_, index) => index !== deletingIndex)
-                        .map((q, index) => ({ ...q, orderIndex: index })),
-                );
-            }
-
-            setDeletingIndex(null);
-            setDeleteConfirmOpen(false);
-        },
-        onError: (error) => {
-            toast.error(`Failed to delete question: ${error.message}`);
-        },
+    const { mutate: deleteQuestion } = useDeleteQuestion(() => {
+        setDeletingIndex(null);
+        setDeleteConfirmOpen(false);
     });
 
     const handleExamDetailsSubmit = (data: ExamFormValues) => {
@@ -115,39 +88,44 @@ export default function CreateExamPage() {
             points: 1,
             orderIndex: questions.length,
             options: [
-                { optionText: "", isCorrect: false, orderIndex: 0 },
-                { optionText: "", isCorrect: false, orderIndex: 1 },
+                {
+                    optionText: "",
+                    isCorrect: false,
+                },
+                {
+                    optionText: "",
+                    isCorrect: false,
+                },
             ],
         });
     };
 
     const handleQuestionSubmit = (data: QuestionFormValues) => {
+        console.log({ data });
         if (!examId) return;
-
         if (editingIndex !== null) {
             const question = questions[editingIndex];
-            if (question && question.id) {
-                updateQuestionMutation.mutate({
+            if (question?.id) {
+                updateQuestion({
                     questionId: question.id,
                     ...data,
                 });
 
-                setQuestions((prev) => {
-                    const newQuestions = [...prev];
-                    newQuestions[editingIndex] = {
-                        ...data,
-                        id: question.id,
-                    };
-                    return newQuestions;
-                });
+                // setQuestions((prev) => {
+                //     const newQuestions = [...prev];
+                //     newQuestions[editingIndex] = {
+                //         ...data,
+                //         id: question.id,
+                //     };
+                //     return newQuestions;
+                // });
             }
         } else {
-            addQuestionMutation.mutate({
+            addQuestion({
                 examId,
                 ...data,
             });
-
-            setQuestions((prev) => [...prev, data]);
+            // setQuestions((prev) => [...prev, data]);
         }
     };
 
@@ -155,7 +133,11 @@ export default function CreateExamPage() {
         setEditingIndex(index);
         const questionToEdit = questions[index];
         if (questionToEdit) {
-            setCurrentQuestion(questionToEdit);
+            questionToEdit.options = questionToEdit.options.map((opt) => ({
+                ...opt,
+                tempId: opt.id.toString(),
+            }));
+            setCurrentQuestion(questionToEdit as unknown as QuestionWithId);
         }
     };
 
@@ -170,8 +152,14 @@ export default function CreateExamPage() {
             return;
         }
 
-        toast.success("Exam created successfully!");
-        router.push("/dashboard/exams");
+        if (!examId) {
+            toast.error("Exam ID is not found");
+            return;
+        }
+
+        finalizeExam({
+            examId: examId,
+        });
     };
 
     return (
@@ -350,22 +338,10 @@ export default function CreateExamPage() {
                             onClick={() => {
                                 if (deletingIndex !== null) {
                                     const question = questions[deletingIndex];
-                                    if (question && question.id) {
-                                        deleteQuestionMutation.mutate({
+                                    if (question?.id) {
+                                        deleteQuestion({
                                             questionId: question.id,
                                         });
-                                    } else {
-                                        setQuestions((prev) =>
-                                            prev
-                                                .filter(
-                                                    (_, i) =>
-                                                        i !== deletingIndex,
-                                                )
-                                                .map((q, i) => ({
-                                                    ...q,
-                                                    orderIndex: i,
-                                                })),
-                                        );
                                     }
                                     setDeleteConfirmOpen(false);
                                 }

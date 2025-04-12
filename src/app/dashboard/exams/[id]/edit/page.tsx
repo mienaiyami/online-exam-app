@@ -10,13 +10,14 @@ import { api } from "@/trpc/react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ExamDetailsForm } from "@/app/dashboard/exams/_components/exam-details-form";
-import type { ExamFormValues } from "@/app/dashboard/exams/create/schema";
+import type { ExamFormValues } from "@/app/dashboard/exams/_hooks/schema";
 
 export default function EditExamPage() {
     const router = useRouter();
     const params = useParams<{ id: string }>();
     const examId = parseInt(params.id, 10);
 
+    const utils = api.useUtils();
     const { data: exam, isLoading } = api.exam.getById.useQuery(
         { examId },
         {
@@ -26,8 +27,9 @@ export default function EditExamPage() {
     );
 
     const updateExamMutation = api.exam.updateExam.useMutation({
-        onSuccess: () => {
+        onSuccess: async () => {
             toast.success("Exam updated successfully");
+            await utils.exam.getById.invalidate();
             router.push(`/dashboard/exams/${examId}`);
         },
         onError: (error) => {
@@ -84,12 +86,6 @@ export default function EditExamPage() {
     return (
         <div className="container max-w-4xl py-10">
             <div className="mb-6 flex items-center">
-                <Button asChild variant="ghost" size="sm" className="mr-4">
-                    <Link href={`/dashboard/exams/${examId}`}>
-                        <ArrowLeft className="mr-2 h-4 w-4" />
-                        Back to Exam
-                    </Link>
-                </Button>
                 <div>
                     <h1 className="text-3xl font-bold tracking-tight">
                         Edit Exam

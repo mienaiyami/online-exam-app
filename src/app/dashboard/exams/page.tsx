@@ -16,6 +16,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Separator } from "@/components/ui/separator";
 
 import { api } from "@/trpc/react";
+import { Badge } from "@/components/ui/badge";
 
 export default function ExamsPage() {
     const [activeTab, setActiveTab] = useState<"created" | "assigned">(
@@ -24,10 +25,12 @@ export default function ExamsPage() {
 
     const createdExams = api.exam.getCreatedExams.useQuery(undefined, {
         enabled: activeTab === "created",
+        refetchOnMount: true,
     });
 
     const assignedExams = api.exam.getAssignedExams.useQuery(undefined, {
         enabled: activeTab === "assigned",
+        refetchOnMount: true,
     });
 
     const formatDuration = (minutes: number) => {
@@ -96,8 +99,18 @@ export default function ExamsPage() {
                                     className="w-80 overflow-hidden"
                                 >
                                     <CardHeader className="pb-4">
-                                        <CardTitle className="line-clamp-1">
-                                            {exam.title}
+                                        <CardTitle className="flex items-center gap-2">
+                                            <span className="line-clamp-1">
+                                                {exam.title}
+                                            </span>
+                                            {!exam.finalized && (
+                                                <Badge
+                                                    variant="outline"
+                                                    className="bg-warning text-warning-foreground"
+                                                >
+                                                    Pending Finalization
+                                                </Badge>
+                                            )}
                                         </CardTitle>
                                     </CardHeader>
                                     <CardContent>

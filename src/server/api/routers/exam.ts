@@ -28,7 +28,6 @@ const createQuestionSchema = z.object({
             z.object({
                 optionText: z.string().min(1),
                 isCorrect: z.boolean().default(false),
-                orderIndex: z.number().int().nonnegative(),
             }),
         )
         .optional(),
@@ -68,6 +67,33 @@ export const examRouter = createTRPCRouter({
                 });
             }
             return exam;
+        }),
+    finalizeExam: protectedProcedure
+        .input(z.object({ examId: z.number().int().positive() }))
+        .mutation(async ({ ctx, input }) => {
+            const exam = await ctx.db.query.exams.findFirst({
+                where: eq(exams.id, input.examId),
+            });
+
+            if (!exam) {
+                throw new TRPCError({
+                    code: "NOT_FOUND",
+                    message: "Exam not found",
+                });
+            }
+
+            if (exam.createdById !== ctx.session.user.id) {
+                throw new TRPCError({
+                    code: "FORBIDDEN",
+                    message: "Only the creator can finalize this exam",
+                });
+            }
+
+            await ctx.db
+                .update(exams)
+                .set({ finalized: true })
+                .where(eq(exams.id, input.examId));
+            return { success: true };
         }),
     deleteExam: protectedProcedure
         .input(z.object({ examId: z.number().int().positive() }))
@@ -240,11 +266,11 @@ export const examRouter = createTRPCRouter({
                     input.options.length > 0
                 ) {
                     await tx.insert(options).values(
-                        input.options.map((option) => ({
+                        input.options.map((option, i) => ({
                             questionId: question.id,
                             optionText: option.optionText,
                             isCorrect: option.isCorrect,
-                            orderIndex: option.orderIndex,
+                            orderIndex: i,
                         })),
                     );
                 }
@@ -311,11 +337,11 @@ export const examRouter = createTRPCRouter({
 
                     if (input.options.length > 0) {
                         await tx.insert(options).values(
-                            input.options.map((option) => ({
+                            input.options.map((option, i) => ({
                                 questionId: input.questionId,
                                 optionText: option.optionText,
                                 isCorrect: option.isCorrect,
-                                orderIndex: option.orderIndex,
+                                orderIndex: i,
                             })),
                         );
                     }
@@ -369,6 +395,12 @@ export const examRouter = createTRPCRouter({
                     message: "Exam not found",
                 });
             }
+            if (!exam.finalized) {
+                throw new TRPCError({
+                    code: "BAD_REQUEST",
+                    message: "Cannot assign an exam that is not finalized",
+                });
+            }
 
             if (exam.createdById !== ctx.session.user.id) {
                 throw new TRPCError({
@@ -407,4 +439,26 @@ export const examRouter = createTRPCRouter({
                 return isAvailableNow;
             });
     }),
+    getQuestions: protectedProcedure
+        .input(
+            z.object({
+                examId: z.number().nullable(),
+            }),
+        )
+        .query(async ({ ctx, input }) => {
+            if (!input.examId) {
+                return [];
+            }
+            return (
+                (await ctx.db.query.questions.findMany({
+                    where: eq(questions.examId, input.examId),
+                    orderBy: (questions, { asc }) => [
+                        asc(questions.orderIndex),
+                    ],
+                    with: {
+                        options: true,
+                    },
+                })) || []
+            );
+        }),
 });

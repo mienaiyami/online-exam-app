@@ -3,14 +3,14 @@
 import * as React from "react";
 import { useRouter, useParams } from "next/navigation";
 import Link from "next/link";
-import { toast } from "sonner";
 import { ArrowLeft } from "lucide-react";
 
 import { api } from "@/trpc/react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { QuestionForm } from "@/app/dashboard/exams/_components/question-form";
-import type { QuestionFormValues } from "@/app/dashboard/exams/create/schema";
+import type { QuestionFormValues } from "@/app/dashboard/exams/_hooks/schema";
+import { useCreateQuestion } from "../../../_hooks/create-question";
 
 export default function AddQuestionPage() {
     const router = useRouter();
@@ -25,20 +25,14 @@ export default function AddQuestionPage() {
         },
     );
 
-    const addQuestionMutation = api.exam.addQuestion.useMutation({
-        onSuccess: () => {
-            toast.success("Question added successfully");
-            router.push(`/dashboard/exams/${examId}`);
-        },
-        onError: (error) => {
-            toast.error(`Failed to add question: ${error.message}`);
-        },
+    const { mutate: addQuestion } = useCreateQuestion(() => {
+        router.push(`/dashboard/exams/${examId}`);
     });
 
     const handleQuestionSubmit = (data: QuestionFormValues) => {
         if (!exam) return;
 
-        addQuestionMutation.mutate({
+        addQuestion({
             examId,
             ...data,
         });
@@ -79,20 +73,14 @@ export default function AddQuestionPage() {
         points: 1,
         orderIndex: exam.questions.length,
         options: [
-            { optionText: "", isCorrect: false, orderIndex: 0 },
-            { optionText: "", isCorrect: false, orderIndex: 1 },
+            { optionText: "", isCorrect: true },
+            { optionText: "", isCorrect: false },
         ],
     };
 
     return (
         <div className="container max-w-4xl py-10">
             <div className="mb-6 flex items-center">
-                <Button asChild variant="ghost" size="sm" className="mr-4">
-                    <Link href={`/dashboard/exams/${examId}`}>
-                        <ArrowLeft className="mr-2 h-4 w-4" />
-                        Back to Exam
-                    </Link>
-                </Button>
                 <div>
                     <h1 className="text-3xl font-bold tracking-tight">
                         Add New Question

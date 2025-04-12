@@ -41,7 +41,6 @@ export const questionFormSchema = z
                         .string()
                         .min(1, { message: "Option text is required" }),
                     isCorrect: z.boolean().default(false),
-                    orderIndex: z.number().int().nonnegative(),
                 }),
             )
             .optional()
@@ -51,12 +50,19 @@ export const questionFormSchema = z
                     return options.some((option) => option.isCorrect);
                 },
                 { message: "At least one option must be marked as correct" },
+            )
+            .refine(
+                (options) => {
+                    if (!options) return true;
+                    return options.length >= 2;
+                },
+                { message: "Options are required" },
             ),
     })
     .refine(
         (data) => {
             if (data.questionType === "multiple_choice") {
-                return data.options && data.options.length > 0;
+                return data.options && data.options.length >= 2;
             }
             return true;
         },
@@ -71,7 +77,7 @@ export const questionFormSchema = z
         }
         data.questionText = dompurify.sanitize(data.questionText);
         if (data.options) {
-            data.options.forEach((option) => {
+            data.options.forEach((option, index) => {
                 option.optionText = dompurify.sanitize(option.optionText);
             });
         }

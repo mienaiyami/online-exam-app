@@ -10,7 +10,8 @@ import { api } from "@/trpc/react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { QuestionForm } from "@/app/dashboard/exams/_components/question-form";
-import type { QuestionFormValues } from "@/app/dashboard/exams/create/schema";
+import type { QuestionFormValues } from "@/app/dashboard/exams/_hooks/schema";
+import { useUpdateQuestion } from "@/app/dashboard/exams/_hooks/update-question";
 
 export default function EditQuestionPage() {
     const router = useRouter();
@@ -31,14 +32,8 @@ export default function EditQuestionPage() {
         },
     );
 
-    const updateQuestionMutation = api.exam.updateQuestion.useMutation({
-        onSuccess: () => {
-            toast.success("Question updated successfully");
-            router.push(`/dashboard/exams/${examId}`);
-        },
-        onError: (error) => {
-            toast.error(`Failed to update question: ${error.message}`);
-        },
+    const { mutate: updateQuestion } = useUpdateQuestion(() => {
+        router.push(`/dashboard/exams/${examId}`);
     });
 
     React.useEffect(() => {
@@ -58,6 +53,7 @@ export default function EditQuestionPage() {
                                   optionText: opt.optionText,
                                   isCorrect: opt.isCorrect,
                                   orderIndex: opt.orderIndex,
+                                  tempId: opt.id.toString(),
                               }))
                             : undefined,
                 };
@@ -68,7 +64,7 @@ export default function EditQuestionPage() {
     }, [exam, questionId, isExamLoading]);
 
     const handleQuestionSubmit = (data: QuestionFormValues) => {
-        updateQuestionMutation.mutate({
+        updateQuestion({
             questionId,
             ...data,
         });
@@ -113,12 +109,6 @@ export default function EditQuestionPage() {
     return (
         <div className="container max-w-4xl py-10">
             <div className="mb-6 flex items-center">
-                <Button asChild variant="ghost" size="sm" className="mr-4">
-                    <Link href={`/dashboard/exams/${examId}`}>
-                        <ArrowLeft className="mr-2 h-4 w-4" />
-                        Back to Exam
-                    </Link>
-                </Button>
                 <div>
                     <h1 className="text-3xl font-bold tracking-tight">
                         Edit Question
