@@ -8,6 +8,9 @@ import { useParams, useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { toast } from "sonner";
+import { cn, minifyHtml } from "@/lib/utils";
+
+const domParser = new DOMParser();
 
 export default function ReorderQuestionsPage() {
     const params = useParams<{ id: string }>();
@@ -109,16 +112,27 @@ export default function ReorderQuestionsPage() {
                             layout
                         >
                             <Card
-                                className={`flex items-center gap-3 p-4 ring-1 ${
+                                className={cn(
+                                    `flex gap-3 p-4 ring-1`,
                                     isDragging === question.id
-                                        ? "ring-primary/40"
-                                        : "ring-transparent"
-                                }`}
+                                        ? "z-20 ring-primary/40"
+                                        : "ring-transparent",
+                                    !!isDragging &&
+                                        isDragging !== question.id &&
+                                        "opacity-50",
+                                )}
                             >
-                                <GripVertical className="h-5 w-5 flex-shrink-0 text-muted-foreground" />
-                                <div className="line-clamp-2">
-                                    {index + 1}. {question.questionText}
-                                </div>
+                                <GripVertical className="mt-0.5 h-5 w-5 flex-shrink-0 text-muted-foreground" />
+                                <span>{index + 1}.</span>
+                                <span
+                                    className="line-clamp-4"
+                                    title={question.questionText}
+                                    dangerouslySetInnerHTML={{
+                                        __html: minifyHtml(
+                                            question.questionText,
+                                        ),
+                                    }}
+                                ></span>
                             </Card>
                         </Reorder.Item>
                     );

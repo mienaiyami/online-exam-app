@@ -62,3 +62,37 @@ export function getUrlFromString(str: string) {
         return null;
     }
 }
+
+//-----
+
+export const minifyHtml = (html: string): string => {
+    const parser = new DOMParser();
+    const doc = parser.parseFromString(html, "text/html");
+    const imgs = doc.querySelectorAll("img");
+    const replaceNode = document.createElement("span");
+    replaceNode.innerHTML = "&lt;Image&gt;";
+    imgs.forEach((img) => {
+        const parent = img.parentElement;
+        if (parent) {
+            parent.replaceChild(replaceNode, img);
+        }
+    });
+    return doc.body.innerHTML;
+};
+export const cleanHtmlForDisplay = (html: string) => {
+    const parser = new DOMParser();
+    const doc = parser.parseFromString(html, "text/html");
+    const imgs = doc.querySelectorAll("img");
+    imgs.forEach((img) => {
+        img.setAttribute("draggable", "false");
+        const align = img.getAttribute("align");
+        img.removeAttribute("align");
+        if (align === "left")
+            img.classList?.add("relative", "left-0", "-translate-x-0");
+        if (align === "center")
+            img.classList?.add("relative", "left-1/2", "-translate-x-1/2");
+        if (align === "right")
+            img.classList?.add("relative", "left-full", "-translate-x-full");
+    });
+    return doc.body.innerHTML;
+};

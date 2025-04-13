@@ -19,6 +19,10 @@ import StarterKit from "@tiptap/starter-kit";
 import { ImageExtension } from "./tiptap/extensions/image";
 import { ImagePlaceholderToolbar } from "./tiptap/toolbars/image-placeholder-toolbar";
 import { ImagePlaceholder } from "./tiptap/extensions/image-placeholder";
+import { UndoToolbar } from "./tiptap/toolbars/undo";
+import { RefCallBack } from "react-hook-form";
+import { cn } from "@/lib/utils";
+import { useEffect } from "react";
 
 const extensions = [
     StarterKit.configure({
@@ -69,18 +73,27 @@ const extensions = [
 export default function RichTextEditor({
     value,
     onChange,
+    name,
+    ref,
+    onBlur,
+    disabled,
+    resizeable = true,
+    className,
 }: {
     value: string;
     onChange: (value: string) => void;
+    name?: string;
+    ref?: RefCallBack;
+    onBlur?: () => void;
+    disabled?: boolean;
+    resizeable?: boolean;
+    className?: string;
 }) {
     const editor = useEditor({
         extensions: extensions,
         content: value,
         immediatelyRender: false,
         onUpdate: ({ editor }) => {
-            console.log({
-                test: editor.getJSON(),
-            });
             if (editor.getText().trim() === "") {
                 onChange("");
             } else {
@@ -89,6 +102,12 @@ export default function RichTextEditor({
         },
     });
 
+    useEffect(() => {
+        if (editor && editor.getHTML() !== value) {
+            editor.commands.setContent(value);
+        }
+    }, [value]);
+
     if (!editor) {
         return null;
     }
@@ -96,8 +115,8 @@ export default function RichTextEditor({
         <div className="relative w-full overflow-hidden rounded-md border pb-3">
             <div className="left-0 top-0 z-10 flex w-full items-center justify-between border-b bg-background px-2 py-2">
                 <ToolbarProvider editor={editor}>
-                    <div className="flex items-center gap-2">
-                        {/* <UndoToolbar /> */}
+                    <div className="flex items-center gap-0">
+                        <UndoToolbar />
                         <RedoToolbar />
                         <Separator orientation="vertical" className="h-7" />
                         <BoldToolbar />
@@ -118,9 +137,20 @@ export default function RichTextEditor({
                 onClick={() => {
                     editor?.chain().focus().run();
                 }}
-                className="max-h-64 min-h-24 cursor-text overflow-y-auto bg-background"
+                className={cn(
+                    "max-h-[30rem] min-h-24 cursor-text overflow-y-auto bg-background",
+                    resizeable && "resize-y",
+                    className,
+                )}
             >
-                <EditorContent className="focus:outline-none" editor={editor} />
+                <EditorContent
+                    className="focus:outline-none"
+                    editor={editor}
+                    ref={ref}
+                    onBlur={onBlur}
+                    name={name}
+                    disabled={disabled}
+                />
             </div>
         </div>
     );

@@ -39,6 +39,7 @@ import {
 import { StrictDeleteAlert } from "../_components/strict-delete-alert";
 import { useFinalizeExam } from "../_hooks/finalize-exam";
 import { useDeleteQuestion } from "../_hooks/delete-question";
+import { cleanHtmlForDisplay } from "@/lib/utils";
 
 export default function ExamDetailPage() {
     const router = useRouter();
@@ -129,8 +130,8 @@ export default function ExamDetailPage() {
     }
 
     return (
-        <div className="py-4 sm:max-w-2xl">
-            <div className="mb-6 flex flex-col gap-2">
+        <div className="py-4">
+            <div className="mb-6 flex max-w-80 flex-col gap-2 md:max-w-xl">
                 <h1
                     title={exam.title}
                     className="truncate text-3xl font-bold tracking-tight"
@@ -164,7 +165,7 @@ export default function ExamDetailPage() {
                 <StrictDeleteAlert onDelete={handleDeleteExam} />
             </div>
 
-            <Card className="mb-8">
+            <Card className="">
                 <CardHeader className="pb-4">
                     <CardTitle>Exam Details</CardTitle>
                 </CardHeader>
@@ -206,7 +207,7 @@ export default function ExamDetailPage() {
                 </CardContent>
             </Card>
 
-            <div className="mb-6">
+            <div className="sticky top-14 z-20 mb-4 bg-background pb-4 pt-8">
                 <div className="flex items-center gap-2">
                     <h2 className="text-2xl font-bold">Questions</h2>
                     <Button
@@ -336,11 +337,13 @@ export default function ExamDetailPage() {
                                 </CardDescription>
                             </CardHeader>
                             <Separator />
-                            <CardContent className="py-4">
+                            <CardContent className="z-2 relative py-4">
                                 <div
                                     className="tiptap mb-4 rounded-md bg-muted/50 p-2"
                                     dangerouslySetInnerHTML={{
-                                        __html: question.questionText,
+                                        __html: cleanHtmlForDisplay(
+                                            question.questionText,
+                                        ),
                                     }}
                                 />
 
@@ -350,24 +353,36 @@ export default function ExamDetailPage() {
                                             <h4 className="text-sm font-medium">
                                                 Options:
                                             </h4>
-                                            <ol className="ml-6 list-decimal space-y-2">
+                                            <ul className="space-y-2">
                                                 {question.options.map(
-                                                    (option) => (
+                                                    (option, i) => (
                                                         <li
                                                             key={option.id}
-                                                            className={`tiptap rounded-md bg-muted/50 p-2 ${
-                                                                option.isCorrect
-                                                                    ? "bg-primary/10"
-                                                                    : ""
-                                                            }`}
+                                                            className="flex items-center gap-2"
                                                         >
-                                                            {option.optionText}
-                                                            {option.isCorrect &&
-                                                                " (Correct)"}
+                                                            <span className="w-4 text-sm text-muted-foreground">
+                                                                {i + 1}.{" "}
+                                                            </span>
+                                                            <div
+                                                                className={`tiptap w-full rounded-md bg-muted/50 p-2 ${
+                                                                    option.isCorrect
+                                                                        ? "bg-primary/30"
+                                                                        : ""
+                                                                }`}
+                                                                dangerouslySetInnerHTML={{
+                                                                    __html:
+                                                                        (option.isCorrect
+                                                                            ? "(Correct)<br/>"
+                                                                            : "") +
+                                                                        cleanHtmlForDisplay(
+                                                                            option.optionText,
+                                                                        ),
+                                                                }}
+                                                            ></div>
                                                         </li>
                                                     ),
                                                 )}
-                                            </ol>
+                                            </ul>
                                         </div>
                                     )}
                             </CardContent>

@@ -27,6 +27,7 @@ import RichTextEditor from "@/components/ui/rich-text-editor";
 import { type QuestionFormValues, questionFormSchema } from "../_hooks/schema";
 import { Label } from "@/components/ui/label";
 import { useEffect, useState } from "react";
+import { Separator } from "@/components/ui/separator";
 
 type QuestionFormProps = {
     onSubmit: (values: QuestionFormValues) => void;
@@ -88,16 +89,16 @@ export function QuestionForm({
         );
     };
 
-    console.log(form.formState.errors);
+    // console.log(form.formState.errors);
 
     return (
         <Form {...form}>
             <form
                 onSubmit={form.handleSubmit(onSubmit)}
                 className="select-none space-y-6"
-                ref={(node) => {
-                    node?.scrollIntoView({ behavior: "smooth" });
-                }}
+                // ref={(node) => {
+                //     node?.scrollIntoView({ behavior: "smooth" });
+                // }}
             >
                 <div className="rounded-lg border bg-card p-6 shadow-sm">
                     <div className="mb-6 flex items-center justify-between">
@@ -199,7 +200,7 @@ export function QuestionForm({
                         />
 
                         {questionType === "multiple_choice" && (
-                            <div className="space-y-4">
+                            <div className="space-y-4 overflow-hidden">
                                 <div className="flex justify-between">
                                     <FormLabel>Options</FormLabel>
                                     <Button
@@ -227,6 +228,9 @@ export function QuestionForm({
                                             transition={{
                                                 duration: isDragging ? 0.2 : 0,
                                             }}
+                                            whileDrag={{
+                                                backdropFilter: "blur(10px)",
+                                            }}
                                             onDragStart={() =>
                                                 setIsDragging(true)
                                             }
@@ -236,31 +240,17 @@ export function QuestionForm({
                                                 );
                                                 setIsDragging(false);
                                             }}
-                                            className="flex items-start space-x-2 rounded-md border p-3"
+                                            className="flex flex-col items-start gap-2 rounded-md border p-3"
                                         >
-                                            <div className="cursor-grab">
-                                                <GripVertical className="mt-2 h-5 w-5 text-muted-foreground" />
-                                            </div>
-
-                                            <div className="flex-1 space-y-3">
-                                                <FormField
-                                                    control={form.control}
-                                                    name={`options.${order}.optionText`}
-                                                    render={({ field }) => (
-                                                        <FormItem>
-                                                            <FormControl>
-                                                                <Input
-                                                                    placeholder={`Option ${order + 1}`}
-                                                                    {...field}
-                                                                />
-                                                            </FormControl>
-                                                            <FormMessage />
-                                                        </FormItem>
-                                                    )}
+                                            <div className="flex flex-row items-center justify-between gap-4">
+                                                <GripVertical className="mr-5 h-5 w-5 cursor-grab text-muted-foreground" />
+                                                <span className="text-sm text-muted-foreground">
+                                                    Option {order + 1}
+                                                </span>
+                                                <Separator
+                                                    orientation="vertical"
+                                                    className="h-5"
                                                 />
-                                            </div>
-
-                                            <div className="flex items-center space-x-2 self-center">
                                                 <FormField
                                                     control={form.control}
                                                     name={`options.${order}.isCorrect`}
@@ -283,7 +273,10 @@ export function QuestionForm({
                                                         </FormItem>
                                                     )}
                                                 />
-
+                                                <Separator
+                                                    orientation="vertical"
+                                                    className="h-5"
+                                                />
                                                 <Button
                                                     type="button"
                                                     variant="ghost"
@@ -297,6 +290,31 @@ export function QuestionForm({
                                                 >
                                                     <Trash2 className="h-4 w-4" />
                                                 </Button>
+                                            </div>
+
+                                            <div className="w-full pl-10">
+                                                <FormField
+                                                    control={form.control}
+                                                    name={`options.${order}.optionText`}
+                                                    render={({ field }) => (
+                                                        <FormItem>
+                                                            <FormControl>
+                                                                {/* <Input
+                                                                    placeholder={`Option ${order + 1}`}
+                                                                    {...field}
+                                                                /> */}
+                                                                <RichTextEditor
+                                                                    {...field}
+                                                                    resizeable={
+                                                                        false
+                                                                    }
+                                                                    className="max-h-60"
+                                                                />
+                                                            </FormControl>
+                                                            <FormMessage />
+                                                        </FormItem>
+                                                    )}
+                                                />
                                             </div>
                                         </Reorder.Item>
                                     ))}
