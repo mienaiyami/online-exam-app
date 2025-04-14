@@ -30,17 +30,23 @@ declare module "next-auth" {
     // }
 }
 
+const isDev = process.env.NODE_ENV === "development";
+
 /**
  * Options for NextAuth.js used to configure adapters, providers, callbacks, etc.
  *
  * @see https://next-auth.js.org/configuration/options
  */
 export const authConfig = {
-    // debug: process.env.NODE_ENV === "development",
+    // debug: isDev,
     session: {
         strategy: "jwt",
     },
-
+    pages: {
+        signIn: "/auth/signin",
+        signOut: "/auth/signout",
+        error: "/auth/error",
+    },
     providers: [
         // DiscordProvider
         GitHubProvider,
@@ -48,30 +54,37 @@ export const authConfig = {
             clientId: env.GOOGLE_CLIENT_ID,
             clientSecret: env.GOOGLE_CLIENT_SECRET,
         }),
-        CredentialsProvider({
-            name: "Mock Credentials",
-            credentials: {
-                email: {
-                    label: "Email",
-                    type: "email",
-                    placeholder: "mock@example.com",
-                },
-            },
-            async authorize(credentials) {
-                if (!credentials?.email) {
-                    return null;
-                }
+        ...(isDev
+            ? [
+                  CredentialsProvider({
+                      name: "Mock Credentials",
+                      credentials: {
+                          email: {
+                              label: "Email",
+                              type: "email",
+                              placeholder: "mock@example.com",
+                          },
+                      },
+                      async authorize(credentials) {
+                          if (!credentials?.email) {
+                              return null;
+                          }
 
-                const user = await db.query.users.findFirst({
-                    where: eq(users.email, credentials.email as string),
-                });
+                          const user = await db.query.users.findFirst({
+                              where: eq(
+                                  users.email,
+                                  credentials.email as string,
+                              ),
+                          });
 
-                if (!user?.id.startsWith("mock-")) {
-                    return null;
-                }
-                return user;
-            },
-        }),
+                          if (!user?.id.startsWith("mock-")) {
+                              return null;
+                          }
+                          return user;
+                      },
+                  }),
+              ]
+            : []),
     ],
     adapter: DrizzleAdapter(db, {
         usersTable: users,
