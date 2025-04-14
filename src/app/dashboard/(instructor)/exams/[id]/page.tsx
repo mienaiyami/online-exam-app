@@ -44,7 +44,7 @@ import { cleanHtmlForDisplay } from "@/lib/utils";
 export default function ExamDetailPage() {
     const router = useRouter();
     const params = useParams<{ id: string }>();
-    const examId = parseInt(params.id, 10);
+    const examId = Number(params.id);
 
     const [deleteQuestionId, setDeleteQuestionId] = React.useState<
         number | null

@@ -7,7 +7,7 @@ import {
     examAssignments,
     users,
 } from "@/server/db/schema";
-import { eq, and, gte, lte, InferSelectModel } from "drizzle-orm";
+import { eq, and, gte, lte, InferSelectModel, sql } from "drizzle-orm";
 import { TRPCError } from "@trpc/server";
 import { canAccessExam, isInstructor } from "../utils/access";
 
@@ -154,6 +154,7 @@ export const examRouter = createTRPCRouter({
         return assignments.map((assignment) => assignment.exam);
     }),
 
+    // only for instructors
     getById: protectedProcedure
         .input(z.object({ examId: z.number().int().positive() }))
         .query(async ({ ctx, input }) => {
@@ -185,6 +186,52 @@ export const examRouter = createTRPCRouter({
             return exam;
         }),
 
+    getByIdForStudent: protectedProcedure
+        .input(z.object({ examId: z.number().int().positive() }))
+        .query(async ({ ctx, input }) => {
+            const assignment = await ctx.db.query.examAssignments.findFirst({
+                where: and(
+                    eq(examAssignments.examId, input.examId),
+                    eq(examAssignments.userId, ctx.session.user.id),
+                ),
+            });
+
+            if (!assignment) {
+                throw new TRPCError({
+                    code: "FORBIDDEN",
+                    message: "You are not assigned to this exam",
+                });
+            }
+
+            const exam = await ctx.db.query.exams.findFirst({
+                where: eq(exams.id, input.examId),
+            });
+
+            if (!exam) {
+                throw new TRPCError({
+                    code: "NOT_FOUND",
+                    message: "Exam not found",
+                });
+            }
+            const questionsCount = await ctx.db
+                .select({
+                    count: sql<number>`count(*)`,
+                })
+                .from(questions)
+                .where(eq(questions.examId, input.examId));
+
+            if (!questionsCount[0]?.count) {
+                throw new TRPCError({
+                    code: "INTERNAL_SERVER_ERROR",
+                    message: "Failed to get questions count",
+                });
+            }
+
+            return {
+                ...exam,
+                questionsCount: questionsCount[0]?.count ?? 0,
+            };
+        }),
     addQuestion: protectedProcedure
         .input(createQuestionSchema)
         .mutation(async ({ ctx, input }) => {
