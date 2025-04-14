@@ -15,6 +15,13 @@
       "when": 1744318082447,
       "tag": "0001_clumsy_molly_hayes",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1744588754471,
+      "tag": "0002_optimal_gladiator",
+      "breakpoints": true
     }
   ]
 }

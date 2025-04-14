@@ -20,6 +20,7 @@ import { formatDate } from "@/lib/utils";
 export default function MyExamsPage() {
     const assignedExams = api.exam.getAssignedExams.useQuery(undefined, {
         refetchOnMount: true,
+        refetchOnWindowFocus: true,
     });
     return (
         <div className="container">
@@ -45,16 +46,22 @@ export default function MyExamsPage() {
                     </p>
                 </div>
             ) : (
-                <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+                <div className="grid grid-cols-[repeat(auto-fill,minmax(20rem,1fr))] gap-4">
                     {assignedExams.data?.map((exam) => (
-                        <Card key={exam.id} className="overflow-hidden">
+                        <Card
+                            key={exam.id}
+                            className="flex flex-col justify-between overflow-hidden"
+                        >
                             <CardHeader className="pb-4">
-                                <CardTitle className="line-clamp-1">
+                                <CardTitle className="flex flex-col gap-2">
                                     {exam.title}
                                 </CardTitle>
                             </CardHeader>
                             <CardContent>
-                                <p className="line-clamp-2 text-sm text-muted-foreground">
+                                <p
+                                    className="truncate text-sm text-muted-foreground"
+                                    title={exam.description || ""}
+                                >
                                     {exam.description ||
                                         "No description provided"}
                                 </p>
@@ -67,7 +74,15 @@ export default function MyExamsPage() {
 
                                     <div className="flex items-center text-sm text-muted-foreground">
                                         <Calendar className="mr-2 h-4 w-4" />
-                                        <span className="truncate">
+                                        <span
+                                            className="truncate"
+                                            title={
+                                                exam.availableFrom &&
+                                                exam.availableTo
+                                                    ? `${formatDate(exam.availableFrom)} to ${formatDate(exam.availableTo)}`
+                                                    : "No date restriction"
+                                            }
+                                        >
                                             {exam.availableFrom &&
                                             exam.availableTo
                                                 ? `${formatDate(exam.availableFrom)} to ${formatDate(exam.availableTo)}`
@@ -76,18 +91,14 @@ export default function MyExamsPage() {
                                     </div>
                                 </div>
                             </CardContent>
-                            <Separator />
-                            <CardFooter className="pt-4">
+                            <CardFooter className="flex flex-col gap-2 p-2">
+                                <Separator />
                                 <Button
                                     asChild
-                                    variant="default"
+                                    variant="secondary"
                                     className="w-full"
                                 >
-                                    <Link
-                                        href={`/dashboard/exams/take/${exam.id}`}
-                                    >
-                                        Take Exam
-                                    </Link>
+                                    <Link href={`/`}>Take Exam</Link>
                                 </Button>
                             </CardFooter>
                         </Card>

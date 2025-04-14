@@ -9,9 +9,9 @@ import { ArrowLeft } from "lucide-react";
 import { api } from "@/trpc/react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { QuestionForm } from "@/app/dashboard/exams/_components/question-form";
-import type { QuestionFormValues } from "@/app/dashboard/exams/_hooks/schema";
-import { useUpdateQuestion } from "@/app/dashboard/exams/_hooks/update-question";
+import { QuestionForm } from "@/app/dashboard/(instructor)/exams/_components/question-form";
+import type { QuestionFormValues } from "@/app/dashboard/(instructor)/exams/_hooks/schema";
+import { useUpdateQuestion } from "@/app/dashboard/(instructor)/exams/_hooks/update-question";
 
 export default function EditQuestionPage() {
     const router = useRouter();

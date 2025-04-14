@@ -13,6 +13,7 @@ export default function ExamHeader() {
     const isReorderingQuestions = /\/exams\/\d+\/questions\/reorder$/.exec(
         pathname,
     );
+    const isAssigning = /\/exams\/\d+\/assign$/.exec(pathname);
     return (
         <div className="container flex h-16 items-center justify-between px-4">
             <div className="flex items-center gap-2">
@@ -38,15 +39,15 @@ export default function ExamHeader() {
                         </Link>
                     </Button>
                 )}
-                {isAddingQuestion && (
+                {isAssigning && (
                     <Button asChild variant="ghost" size="sm" className="">
-                        <Link href={`..`}>
+                        <Link href={`.`}>
                             <ArrowLeft className="mr-2 h-4 w-4" />
                             Back to Exam
                         </Link>
                     </Button>
                 )}
-                {isReorderingQuestions && (
+                {(isReorderingQuestions || isAddingQuestion) && (
                     <Button asChild variant="ghost" size="sm" className="">
                         <Link href={`..`}>
                             <ArrowLeft className="mr-2 h-4 w-4" />

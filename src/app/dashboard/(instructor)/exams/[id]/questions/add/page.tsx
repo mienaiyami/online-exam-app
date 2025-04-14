@@ -3,22 +3,21 @@
 import * as React from "react";
 import { useRouter, useParams } from "next/navigation";
 import Link from "next/link";
-import { toast } from "sonner";
 import { ArrowLeft } from "lucide-react";
 
 import { api } from "@/trpc/react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { ExamDetailsForm } from "@/app/dashboard/exams/_components/exam-details-form";
-import type { ExamFormValues } from "@/app/dashboard/exams/_hooks/schema";
+import { QuestionForm } from "@/app/dashboard/(instructor)/exams/_components/question-form";
+import type { QuestionFormValues } from "@/app/dashboard/(instructor)/exams/_hooks/schema";
+import { useCreateQuestion } from "../../../_hooks/create-question";
 
-export default function EditExamPage() {
+export default function AddQuestionPage() {
     const router = useRouter();
     const params = useParams<{ id: string }>();
     const examId = parseInt(params.id, 10);
 
-    const utils = api.useUtils();
-    const { data: exam, isLoading } = api.exam.getById.useQuery(
+    const { data: exam, isLoading: isExamLoading } = api.exam.getById.useQuery(
         { examId },
         {
             enabled: !isNaN(examId),
@@ -26,27 +25,20 @@ export default function EditExamPage() {
         },
     );
 
-    const updateExamMutation = api.exam.updateExam.useMutation({
-        onSuccess: async () => {
-            toast.success("Exam updated successfully");
-            await utils.exam.getById.invalidate();
-            router.push(`/dashboard/exams/${examId}`);
-        },
-        onError: (error) => {
-            toast.error(`Failed to update exam: ${error.message}`);
-        },
+    const { mutate: addQuestion } = useCreateQuestion(() => {
+        router.push(`/dashboard/exams/${examId}`);
     });
 
-    const handleExamSubmit = (data: ExamFormValues) => {
+    const handleQuestionSubmit = (data: QuestionFormValues) => {
         if (!exam) return;
 
-        updateExamMutation.mutate({
+        addQuestion({
             examId,
             ...data,
         });
     };
 
-    if (isLoading) {
+    if (isExamLoading) {
         return (
             <div className="container flex h-96 items-center justify-center">
                 <p>Loading exam details...</p>
@@ -61,7 +53,7 @@ export default function EditExamPage() {
                     <h2 className="text-xl font-medium">Exam not found</h2>
                     <p className="mt-2 text-muted-foreground">
                         {
-                            "The exam you're trying to edit doesn't exist or you don't have access to it."
+                            "The exam you're trying to add a question to doesn't exist or you don't have access to it."
                         }
                     </p>
                     <Button asChild className="mt-4">
@@ -75,36 +67,39 @@ export default function EditExamPage() {
         );
     }
 
-    const defaultValues: ExamFormValues = {
-        title: exam.title,
-        description: exam.description ?? "",
-        timeLimit: exam.timeLimit,
-        availableFrom: exam.availableFrom ?? undefined,
-        availableTo: exam.availableTo ?? undefined,
+    const defaultValues: QuestionFormValues = {
+        questionText: "",
+        questionType: "multiple_choice",
+        points: 1,
+        orderIndex: exam.questions.length,
+        options: [
+            { optionText: "", isCorrect: true },
+            { optionText: "", isCorrect: false },
+        ],
     };
 
     return (
-        <div className="py-4 sm:max-w-2xl">
+        <div className="container max-w-4xl py-10">
             <div className="mb-6 flex items-center">
                 <div>
                     <h1 className="text-3xl font-bold tracking-tight">
-                        Edit Exam
+                        Add New Question
                     </h1>
                     <p className="mt-1 text-muted-foreground">
-                        Update the details for {exam.title}
+                        Exam: {exam.title}
                     </p>
                 </div>
             </div>
 
             <Card>
                 <CardHeader>
-                    <CardTitle>Exam Details</CardTitle>
+                    <CardTitle>Question Details</CardTitle>
                 </CardHeader>
                 <CardContent>
-                    <ExamDetailsForm
-                        onSubmit={handleExamSubmit}
+                    <QuestionForm
+                        onSubmit={handleQuestionSubmit}
                         defaultValues={defaultValues}
-                        submitLabel="Update Exam"
+                        questionIndex={exam.questions.length}
                     />
                 </CardContent>
             </Card>

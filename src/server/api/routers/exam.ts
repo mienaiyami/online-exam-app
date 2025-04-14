@@ -1,9 +1,15 @@
 import { z } from "zod";
 import { createTRPCRouter, protectedProcedure } from "@/server/api/trpc";
-import { exams, questions, options, examAssignments } from "@/server/db/schema";
-import { eq, and, gte, lte } from "drizzle-orm";
+import {
+    exams,
+    questions,
+    options,
+    examAssignments,
+    users,
+} from "@/server/db/schema";
+import { eq, and, gte, lte, InferSelectModel } from "drizzle-orm";
 import { TRPCError } from "@trpc/server";
-import { isInstructor } from "../utils/access";
+import { canAccessExam, isInstructor } from "../utils/access";
 
 const questionTypeSchema = z.enum(["multiple_choice", "short_answer", "essay"]);
 
@@ -45,6 +51,16 @@ const assignExamSchema = z.object({
     userIds: z.array(z.string()),
 });
 
+const assignExamBulkSchema = z.object({
+    examId: z.number().int().positive(),
+    userIdentifiers: z.array(
+        z.object({
+            type: z.enum(["id", "email"]),
+            value: z.string(),
+        }),
+    ),
+});
+
 export const examRouter = createTRPCRouter({
     create: protectedProcedure
         .input(createExamSchema)
@@ -78,29 +94,7 @@ export const examRouter = createTRPCRouter({
     finalizeExam: protectedProcedure
         .input(z.object({ examId: z.number().int().positive() }))
         .mutation(async ({ ctx, input }) => {
-            if (!(await isInstructor(ctx))) {
-                throw new TRPCError({
-                    code: "FORBIDDEN",
-                    message: "Only instructors can finalize exams",
-                });
-            }
-            const exam = await ctx.db.query.exams.findFirst({
-                where: eq(exams.id, input.examId),
-            });
-
-            if (!exam) {
-                throw new TRPCError({
-                    code: "NOT_FOUND",
-                    message: "Exam not found",
-                });
-            }
-
-            if (exam.createdById !== ctx.session.user.id) {
-                throw new TRPCError({
-                    code: "FORBIDDEN",
-                    message: "Only the creator can finalize this exam",
-                });
-            }
+            await canAccessExam(ctx, input.examId);
 
             await ctx.db
                 .update(exams)
@@ -111,29 +105,7 @@ export const examRouter = createTRPCRouter({
     deleteExam: protectedProcedure
         .input(z.object({ examId: z.number().int().positive() }))
         .mutation(async ({ ctx, input }) => {
-            if (!(await isInstructor(ctx))) {
-                throw new TRPCError({
-                    code: "FORBIDDEN",
-                    message: "Only instructors can delete exams",
-                });
-            }
-            const exam = await ctx.db.query.exams.findFirst({
-                where: eq(exams.id, input.examId),
-            });
-
-            if (!exam) {
-                throw new TRPCError({
-                    code: "NOT_FOUND",
-                    message: "Exam not found",
-                });
-            }
-
-            if (exam.createdById !== ctx.session.user.id) {
-                throw new TRPCError({
-                    code: "FORBIDDEN",
-                    message: "Only the creator can delete this exam",
-                });
-            }
+            await canAccessExam(ctx, input.examId, true);
 
             await ctx.db.delete(exams).where(eq(exams.id, input.examId));
 
@@ -143,31 +115,9 @@ export const examRouter = createTRPCRouter({
     updateExam: protectedProcedure
         .input(updateExamSchema)
         .mutation(async ({ ctx, input }) => {
-            if (!(await isInstructor(ctx))) {
-                throw new TRPCError({
-                    code: "FORBIDDEN",
-                    message: "Only instructors can update exams",
-                });
-            }
             const { examId, ...updateData } = input;
 
-            const exam = await ctx.db.query.exams.findFirst({
-                where: eq(exams.id, examId),
-            });
-
-            if (!exam) {
-                throw new TRPCError({
-                    code: "NOT_FOUND",
-                    message: "Exam not found",
-                });
-            }
-
-            if (exam.createdById !== ctx.session.user.id) {
-                throw new TRPCError({
-                    code: "FORBIDDEN",
-                    message: "Only the creator can update this exam",
-                });
-            }
+            await canAccessExam(ctx, examId, true);
 
             const [updatedExam] = await ctx.db
                 .update(exams)
@@ -208,7 +158,11 @@ export const examRouter = createTRPCRouter({
         .input(z.object({ examId: z.number().int().positive() }))
         .query(async ({ ctx, input }) => {
             const exam = await ctx.db.query.exams.findFirst({
-                where: eq(exams.id, input.examId),
+                where: (exams) =>
+                    and(
+                        eq(exams.id, input.examId),
+                        eq(exams.createdById, ctx.session.user.id),
+                    ),
                 with: {
                     questions: {
                         with: {
@@ -224,28 +178,8 @@ export const examRouter = createTRPCRouter({
             if (!exam) {
                 throw new TRPCError({
                     code: "NOT_FOUND",
-                    message: "Exam not found",
+                    message: "Exam (created by you) not found",
                 });
-            }
-
-            const isCreator = exam.createdById === ctx.session.user.id;
-
-            if (!isCreator) {
-                const assignment = await ctx.db.query.examAssignments.findFirst(
-                    {
-                        where: and(
-                            eq(examAssignments.examId, input.examId),
-                            eq(examAssignments.userId, ctx.session.user.id),
-                        ),
-                    },
-                );
-
-                if (!assignment) {
-                    throw new TRPCError({
-                        code: "FORBIDDEN",
-                        message: "You don't have access to this exam",
-                    });
-                }
             }
 
             return exam;
@@ -254,29 +188,7 @@ export const examRouter = createTRPCRouter({
     addQuestion: protectedProcedure
         .input(createQuestionSchema)
         .mutation(async ({ ctx, input }) => {
-            if (!(await isInstructor(ctx))) {
-                throw new TRPCError({
-                    code: "FORBIDDEN",
-                    message: "Only instructors can add questions to exams",
-                });
-            }
-            const exam = await ctx.db.query.exams.findFirst({
-                where: eq(exams.id, input.examId),
-            });
-
-            if (!exam) {
-                throw new TRPCError({
-                    code: "NOT_FOUND",
-                    message: "Exam not found",
-                });
-            }
-
-            if (exam.createdById !== ctx.session.user.id) {
-                throw new TRPCError({
-                    code: "FORBIDDEN",
-                    message: "Only the creator can add questions to this exam",
-                });
-            }
+            await canAccessExam(ctx, input.examId);
 
             return await ctx.db.transaction(async (tx) => {
                 const [question] = await tx
@@ -319,12 +231,6 @@ export const examRouter = createTRPCRouter({
     updateQuestion: protectedProcedure
         .input(updateQuestionSchema)
         .mutation(async ({ ctx, input }) => {
-            if (!(await isInstructor(ctx))) {
-                throw new TRPCError({
-                    code: "FORBIDDEN",
-                    message: "Only instructors can update questions",
-                });
-            }
             const question = await ctx.db.query.questions.findFirst({
                 where: eq(questions.id, input.questionId),
                 with: {
@@ -402,24 +308,7 @@ export const examRouter = createTRPCRouter({
             }),
         )
         .mutation(async ({ ctx, input }) => {
-            const exam = await ctx.db.query.exams.findFirst({
-                where: eq(exams.id, input.examId),
-            });
-
-            if (!exam) {
-                throw new TRPCError({
-                    code: "NOT_FOUND",
-                    message: "Exam not found",
-                });
-            }
-
-            if (exam.createdById !== ctx.session.user.id) {
-                throw new TRPCError({
-                    code: "FORBIDDEN",
-                    message:
-                        "Only the creator can reorder questions in this exam",
-                });
-            }
+            await canAccessExam(ctx, input.examId);
 
             await ctx.db.transaction(async (tx) => {
                 for (let i = 0; i < input.questionIds.length; i++) {
@@ -438,12 +327,6 @@ export const examRouter = createTRPCRouter({
     deleteQuestion: protectedProcedure
         .input(z.object({ questionId: z.number().int().positive() }))
         .mutation(async ({ ctx, input }) => {
-            if (!(await isInstructor(ctx))) {
-                throw new TRPCError({
-                    code: "FORBIDDEN",
-                    message: "Only instructors can delete questions",
-                });
-            }
             const question = await ctx.db.query.questions.findFirst({
                 where: eq(questions.id, input.questionId),
                 with: {
@@ -475,12 +358,6 @@ export const examRouter = createTRPCRouter({
     assignExam: protectedProcedure
         .input(assignExamSchema)
         .mutation(async ({ ctx, input }) => {
-            if (!(await isInstructor(ctx))) {
-                throw new TRPCError({
-                    code: "FORBIDDEN",
-                    message: "Only instructors can assign exams",
-                });
-            }
             const exam = await ctx.db.query.exams.findFirst({
                 where: eq(exams.id, input.examId),
             });
@@ -505,14 +382,127 @@ export const examRouter = createTRPCRouter({
                 });
             }
 
-            await ctx.db.insert(examAssignments).values(
-                input.userIds.map((userId) => ({
-                    examId: input.examId,
-                    userId,
-                })),
-            );
+            const result = {
+                success: true,
+                assignedCount: 0,
+                alreadyAssignedCount: 0,
+                notFoundCount: [] as string[],
+                totalInputCount: input.userIds.length,
+            };
 
-            return { success: true };
+            await ctx.db.transaction(async (tx) => {
+                for (const userId of input.userIds) {
+                    const user = await tx.query.users.findFirst({
+                        where: eq(users.id, userId),
+                    });
+
+                    if (!user) {
+                        result.notFoundCount.push(userId);
+                        continue;
+                    }
+
+                    const existingAssignment =
+                        await tx.query.examAssignments.findFirst({
+                            where: and(
+                                eq(examAssignments.examId, input.examId),
+                                eq(examAssignments.userId, userId),
+                            ),
+                        });
+
+                    if (existingAssignment) {
+                        result.alreadyAssignedCount++;
+                        continue;
+                    }
+
+                    await tx.insert(examAssignments).values({
+                        examId: input.examId,
+                        userId,
+                    });
+
+                    result.assignedCount++;
+                }
+            });
+
+            return result;
+        }),
+
+    assignExamBulk: protectedProcedure
+        .input(assignExamBulkSchema)
+        .mutation(async ({ ctx, input }) => {
+            const exam = await ctx.db.query.exams.findFirst({
+                where: eq(exams.id, input.examId),
+            });
+
+            if (!exam) {
+                throw new TRPCError({
+                    code: "NOT_FOUND",
+                    message: "Exam not found",
+                });
+            }
+            if (!exam.finalized) {
+                throw new TRPCError({
+                    code: "BAD_REQUEST",
+                    message: "Cannot assign an exam that is not finalized",
+                });
+            }
+
+            if (exam.createdById !== ctx.session.user.id) {
+                throw new TRPCError({
+                    code: "FORBIDDEN",
+                    message: "Only the creator can assign this exam",
+                });
+            }
+
+            const result = {
+                success: true,
+                assignedCount: 0,
+                alreadyAssignedCount: 0,
+                notFoundCount: [] as string[],
+                totalInputCount: input.userIdentifiers.length,
+            };
+
+            await ctx.db.transaction(async (tx) => {
+                for (const identifier of input.userIdentifiers) {
+                    let user: InferSelectModel<typeof users> | undefined;
+
+                    if (identifier.type === "id") {
+                        user = await tx.query.users.findFirst({
+                            where: eq(users.id, identifier.value),
+                        });
+                    } else {
+                        user = await tx.query.users.findFirst({
+                            where: eq(users.email, identifier.value),
+                        });
+                    }
+
+                    if (!user) {
+                        result.notFoundCount.push(identifier.value);
+                        continue;
+                    }
+
+                    const existingAssignment =
+                        await tx.query.examAssignments.findFirst({
+                            where: and(
+                                eq(examAssignments.examId, input.examId),
+                                eq(examAssignments.userId, user.id),
+                            ),
+                        });
+
+                    if (existingAssignment) {
+                        result.alreadyAssignedCount++;
+                        continue;
+                    }
+
+                    await tx.insert(examAssignments).values({
+                        examId: input.examId,
+                        userId: user.id,
+                    });
+
+                    result.assignedCount++;
+                }
+            });
+
+            return result;
         }),
 
     getAvailableExams: protectedProcedure.query(async ({ ctx }) => {
@@ -535,6 +525,7 @@ export const examRouter = createTRPCRouter({
                 return isAvailableNow;
             });
     }),
+
     getQuestions: protectedProcedure
         .input(
             z.object({
@@ -542,15 +533,10 @@ export const examRouter = createTRPCRouter({
             }),
         )
         .query(async ({ ctx, input }) => {
-            if (!(await isInstructor(ctx))) {
-                throw new TRPCError({
-                    code: "FORBIDDEN",
-                    message: "Only instructors can view questions",
-                });
-            }
             if (!input.examId) {
                 return [];
             }
+            await canAccessExam(ctx, input.examId);
             return (
                 (await ctx.db.query.questions.findMany({
                     where: eq(questions.examId, input.examId),

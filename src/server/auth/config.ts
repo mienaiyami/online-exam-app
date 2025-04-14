@@ -1,9 +1,8 @@
 import { DrizzleAdapter } from "@auth/drizzle-adapter";
 import { type DefaultSession, type NextAuthConfig } from "next-auth";
-import DiscordProvider from "next-auth/providers/discord";
 import GitHubProvider from "next-auth/providers/github";
 import GoogleProvider from "next-auth/providers/google";
-
+import CredentialsProvider from "next-auth/providers/credentials";
 import { db } from "@/server/db";
 import {
     accounts,
@@ -14,6 +13,7 @@ import {
 } from "@/server/db/schema";
 import { eq } from "drizzle-orm";
 import { env } from "@/env";
+import { randomUUID } from "crypto";
 
 declare module "next-auth" {
     interface Session extends DefaultSession {
@@ -37,12 +37,40 @@ declare module "next-auth" {
  */
 export const authConfig = {
     // debug: process.env.NODE_ENV === "development",
+    session: {
+        strategy: "jwt",
+    },
+
     providers: [
         // DiscordProvider
         GitHubProvider,
         GoogleProvider({
             clientId: env.GOOGLE_CLIENT_ID,
             clientSecret: env.GOOGLE_CLIENT_SECRET,
+        }),
+        CredentialsProvider({
+            name: "Mock Credentials",
+            credentials: {
+                email: {
+                    label: "Email",
+                    type: "email",
+                    placeholder: "mock@example.com",
+                },
+            },
+            async authorize(credentials) {
+                if (!credentials?.email) {
+                    return null;
+                }
+
+                const user = await db.query.users.findFirst({
+                    where: eq(users.email, credentials.email as string),
+                });
+
+                if (!user?.id.startsWith("mock-")) {
+                    return null;
+                }
+                return user;
+            },
         }),
     ],
     adapter: DrizzleAdapter(db, {
@@ -52,22 +80,26 @@ export const authConfig = {
         verificationTokensTable: verificationTokens,
     }),
     callbacks: {
-        session: async ({ session, user }) => {
+        session: async ({ session, token }) => {
+            // token.sub is the user id
+            if (!token.sub) {
+                return session;
+            }
             const userRolesList = await db.query.userRoles.findMany({
-                where: eq(userRoles.userId, user.id),
+                where: eq(userRoles.userId, token.sub),
             });
             const roles = userRolesList.map((role) => role.role);
             return {
                 ...session,
                 user: {
                     ...session.user,
-                    id: user.id,
+                    id: token.sub,
                     roles,
                 },
             };
         },
         signIn: async ({ user }) => {
-            if (!user.id) {
+            if (!user?.id) {
                 return false;
             }
             const existingRole = await db.query.userRoles.findMany({

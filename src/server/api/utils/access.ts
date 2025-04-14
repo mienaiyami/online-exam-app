@@ -1,48 +1,51 @@
-import { and, eq } from "drizzle-orm";
-import { userRoles } from "@/server/db/schema";
+import { and, eq, InferSelectModel } from "drizzle-orm";
+import { exams, userRoles } from "@/server/db/schema";
 import type { TRPCContext } from "../trpc";
+import { TRPCError } from "@trpc/server";
 
 // ! instead of this, make specific protected procedures for each role?
 
 export const isAdmin = async (ctx: TRPCContext): Promise<boolean> => {
     if (!ctx.session) return false;
-
-    const isAdmin = await ctx.db.query.userRoles.findFirst({
-        where: and(
-            eq(userRoles.userId, ctx.session.user.id),
-            eq(userRoles.role, "admin"),
-        ),
-    });
-
-    return !!isAdmin;
+    return ctx.session.user.roles.includes("admin");
 };
 export const isInstructor = async (ctx: TRPCContext): Promise<boolean> => {
     if (!ctx.session) return false;
-    const isInstructor = await ctx.db.query.userRoles.findFirst({
-        where: and(
-            eq(userRoles.userId, ctx.session.user.id),
-            eq(userRoles.role, "instructor"),
-        ),
-    });
-    return !!isInstructor;
+    return ctx.session.user.roles.includes("instructor");
 };
 export const isAdminOrInstructor = async (
     ctx: TRPCContext,
 ): Promise<boolean> => {
     if (!ctx.session) return false;
-    const isInstructor = await ctx.db.query.userRoles.findFirst({
-        where: and(
-            eq(userRoles.userId, ctx.session.user.id),
-            eq(userRoles.role, "instructor"),
-        ),
-    });
+    return (
+        ctx.session.user.roles.includes("admin") ||
+        ctx.session.user.roles.includes("instructor")
+    );
+};
 
-    const isAdmin = await ctx.db.query.userRoles.findFirst({
-        where: and(
-            eq(userRoles.userId, ctx.session.user.id),
-            eq(userRoles.role, "admin"),
-        ),
+export const canAccessExam = async (
+    ctx: TRPCContext,
+    examId: number,
+    allowAdmin = false,
+): Promise<InferSelectModel<typeof exams> | null> => {
+    if (!ctx.session) return null;
+    const exam = await ctx.db.query.exams.findFirst({
+        where: eq(exams.id, examId),
     });
-
-    return !!isInstructor || !!isAdmin;
+    if (!exam) {
+        throw new TRPCError({
+            code: "NOT_FOUND",
+            message: "Exam not found",
+        });
+    }
+    if (
+        exam.createdById !== ctx.session.user.id &&
+        !(allowAdmin && ctx.session.user.roles.includes("admin"))
+    ) {
+        throw new TRPCError({
+            code: "FORBIDDEN",
+            message: "You are not allowed to access this exam",
+        });
+    }
+    return exam;
 };

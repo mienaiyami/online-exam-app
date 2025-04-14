@@ -61,7 +61,7 @@ export default function ExamsPage() {
                                 <CardTitle className="flex flex-col gap-2">
                                     <Link
                                         href={`/dashboard/exams/${exam.id}`}
-                                        className="truncate underline-offset-2 hover:underline"
+                                        className="truncate underline-offset-1 hover:underline"
                                         title={exam.title}
                                     >
                                         {exam.title}

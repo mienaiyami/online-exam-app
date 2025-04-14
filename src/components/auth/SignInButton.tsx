@@ -2,12 +2,14 @@
 
 import { signIn } from "next-auth/react";
 import { Button } from "@/components/ui/button";
-import { Github } from "lucide-react";
+import { Github, User } from "lucide-react";
+import { useState } from "react";
+import { Input } from "../ui/input";
 
 export function SignInButton() {
     return (
         <>
-            <Button
+            {/* <Button
                 onClick={() => signIn("github", { redirectTo: "/dashboard" })}
                 className="flex items-center gap-2"
             >
@@ -29,6 +31,13 @@ export function SignInButton() {
                     />
                 </svg>
                 Sign in with Google
+            </Button> */}
+            <Button
+                onClick={() => signIn(undefined, { redirectTo: "/dashboard" })}
+                className="flex items-center gap-2"
+            >
+                <User className="h-5 w-5" />
+                Sign in
             </Button>
         </>
     );

@@ -41,7 +41,7 @@ export function ExamDetailsForm({
         description: "",
         timeLimit: 60,
     },
-    submitLabel = "Continue to Add Questions",
+    submitLabel = "Continue",
 }: ExamDetailsFormProps) {
     const form = useForm<ExamFormValues>({
         resolver: zodResolver(examFormSchema),

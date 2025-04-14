@@ -54,7 +54,7 @@ export default async function DashboardLayout({
                     </h1>
                 </div>
                 <nav className="mt-6">
-                    <ul className="space-y-2 px-2">
+                    <ul className="space-y-1 px-2">
                         <li>
                             <Link
                                 href="/dashboard"
@@ -72,14 +72,6 @@ export default async function DashboardLayout({
                                         className="block rounded-md px-4 py-2 hover:bg-foreground/10"
                                     >
                                         Manage Exams
-                                    </Link>
-                                </li>
-                                <li>
-                                    <Link
-                                        href="/dashboard/students"
-                                        className="block rounded-md px-4 py-2 hover:bg-foreground/10"
-                                    >
-                                        Students
                                     </Link>
                                 </li>
                             </>
