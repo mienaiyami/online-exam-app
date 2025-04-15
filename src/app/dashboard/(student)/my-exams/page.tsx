@@ -14,6 +14,7 @@ import {
     Loader2,
     LayoutGrid,
     LockIcon,
+    ClockAlert,
 } from "lucide-react";
 
 import {
@@ -28,13 +29,6 @@ import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
-import {
-    Tooltip,
-    TooltipContent,
-    TooltipProvider,
-    TooltipTrigger,
-} from "@/components/ui/tooltip";
-
 import { api } from "@/trpc/react";
 import { formatDuration, cn } from "@/lib/utils";
 
@@ -60,8 +54,8 @@ const getStatusBadge = (status: "in_progress" | "submitted" | "graded") => {
                     variant="outline"
                     className="border-blue-200 bg-blue-50 text-blue-700 dark:border-blue-800 dark:bg-blue-950 dark:text-blue-300"
                 >
-                    <CheckCircle className="mr-1 h-3 w-3" />
-                    Submitted
+                    <ClockAlert className="mr-1 h-3 w-3" />
+                    Pending Grading
                 </Badge>
             );
         case "graded":
@@ -79,20 +73,6 @@ const getStatusBadge = (status: "in_progress" | "submitted" | "graded") => {
     }
 };
 
-const getCompletionBadge = (completed: boolean) => {
-    if (completed) {
-        return (
-            <Badge
-                variant="outline"
-                className="absolute right-3 top-3 border-green-200 bg-green-50 text-green-700 dark:border-green-800 dark:bg-green-950 dark:text-green-300"
-            >
-                <CheckCircle className="mr-1 h-3 w-3" />
-                Completed
-            </Badge>
-        );
-    }
-    return null;
-};
 export default function MyExamsPage() {
     const [activeTab, setActiveTab] = useState<"available" | "history">(
         "available",
@@ -166,20 +146,23 @@ export default function MyExamsPage() {
                             ))}
                         </div>
                     ) : availableExams && availableExams.length > 0 ? (
-                        <div className="grid gap-4 sm:grid-cols-2 md:grid-cols-3">
+                        <div className="grid grid-cols-[repeat(auto-fill,minmax(20rem,1fr))] gap-4">
                             {availableExams.map((exam) => (
                                 <Card
                                     key={exam.id}
                                     className="relative overflow-hidden"
                                 >
-                                    {getCompletionBadge(
-                                        exam.assignment?.completed ?? false,
-                                    )}
                                     <CardHeader className="space-y-1">
-                                        <CardTitle className="line-clamp-1">
+                                        <CardTitle
+                                            className="line-clamp-1"
+                                            title={exam.title}
+                                        >
                                             {exam.title}
                                         </CardTitle>
-                                        <CardDescription className="line-clamp-1">
+                                        <CardDescription
+                                            className="line-clamp-1"
+                                            title={exam.description || ""}
+                                        >
                                             {exam.description ||
                                                 "No description provided"}
                                         </CardDescription>
@@ -213,39 +196,17 @@ export default function MyExamsPage() {
                                     </CardContent>
 
                                     <CardFooter>
-                                        {exam.assignment?.completed ? (
-                                            <TooltipProvider>
-                                                <Tooltip>
-                                                    <TooltipTrigger asChild>
-                                                        <Button
-                                                            disabled
-                                                            className="w-full gap-2"
-                                                        >
-                                                            <LockIcon className="h-4 w-4" />
-                                                            Exam Completed
-                                                        </Button>
-                                                    </TooltipTrigger>
-                                                    <TooltipContent>
-                                                        <p>
-                                                            You have already
-                                                            completed this exam
-                                                        </p>
-                                                    </TooltipContent>
-                                                </Tooltip>
-                                            </TooltipProvider>
-                                        ) : (
-                                            <Button
-                                                asChild
-                                                className="w-full gap-2"
+                                        <Button
+                                            asChild
+                                            className="w-full gap-2"
+                                        >
+                                            <Link
+                                                href={`/exam/start/${exam.id}`}
                                             >
-                                                <Link
-                                                    href={`/exam/start/${exam.id}`}
-                                                >
-                                                    <PlayCircle className="h-4 w-4" />
-                                                    Begin Exam
-                                                </Link>
-                                            </Button>
-                                        )}
+                                                <PlayCircle className="h-4 w-4" />
+                                                Begin Exam
+                                            </Link>
+                                        </Button>
                                     </CardFooter>
                                 </Card>
                             ))}
@@ -264,7 +225,10 @@ export default function MyExamsPage() {
                     )}
                 </TabsContent>
 
-                <TabsContent value="history" className="space-y-6">
+                <TabsContent
+                    value="history"
+                    className="grid grid-cols-[repeat(auto-fill,minmax(20rem,1fr))] gap-4"
+                >
                     {historyLoading ? (
                         <div className="space-y-4">
                             {[...Array(3)].map((_, i) => (

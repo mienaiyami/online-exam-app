@@ -47,7 +47,7 @@ export default async function DashboardLayout({
 
     return (
         <div className="grid min-h-screen grid-cols-[16rem_1fr]">
-            <div className="w-full border-r">
+            <div className="sticky top-0 h-screen w-full border-r">
                 <div className="p-4">
                     <h1 className="text-xl font-bold">
                         <Link href="/">Online Exam Platform</Link>

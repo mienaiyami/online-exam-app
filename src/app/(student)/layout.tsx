@@ -12,9 +12,5 @@ export default async function StudentLayout({
         redirect("/auth/signin?callbackUrl=/exam");
     }
 
-    return (
-        <div className="min-h-screen">
-            <main>{children}</main>
-        </div>
-    );
+    return children;
 }

@@ -44,17 +44,23 @@ export default function Time({
 
         return () => clearInterval(interval);
     }, [startedAt, onTimeUp, timeLimit]);
-
+    const isTimeRunningOut =
+        timeRemaining !== null && timeRemaining < 5 * 60 * 1000;
     return (
-        <div className="flex items-center gap-2 rounded-md bg-muted px-4 py-2 font-mono text-lg font-medium">
-            <Clock className="h-5 w-5 text-muted-foreground" />
-            <span
+        <div
+            className={cn(
+                "text flex items-center gap-1 rounded-md border bg-muted p-2 font-mono font-medium",
+                isTimeRunningOut &&
+                    "animate-pulse border border-red-500/50 bg-red-500 text-white dark:animate-none dark:border-red-500/50 dark:bg-red-500/5 dark:text-red-500",
+            )}
+        >
+            <Clock
                 className={cn(
-                    timeRemaining !== null &&
-                        timeRemaining < 5 * 60 * 1000 &&
-                        "animate-pulse text-red-500",
+                    "size-4",
+                    isTimeRunningOut && "dark:animate-pulse",
                 )}
-            >
+            />
+            <span className={cn(isTimeRunningOut && "dark:animate-pulse")}>
                 {formattedTimeRemaining}
             </span>
         </div>

@@ -33,9 +33,10 @@ import {
     Save,
     Send,
 } from "lucide-react";
-import { cn } from "@/lib/utils";
+import { cleanHtmlForDisplay, cn } from "@/lib/utils";
 import { toast } from "sonner";
 import Time from "./_components/time";
+import ToggleTheme from "@/components/theme/toggle-theme";
 
 type Response = {
     questionId: number;
@@ -75,18 +76,20 @@ export default function ExamSessionPage() {
             {
                 enabled: !isNaN(sessionId),
                 retry: 1,
+                refetchOnMount: false,
+                refetchOnWindowFocus: false,
             },
         );
 
     const { mutate: saveResponse } = api.examSession.saveResponse.useMutation({
         onSuccess: () => {
             setSaveSuccess(true);
-            setTimeout(() => setSaveSuccess(null), 1500);
+            setTimeout(() => setSaveSuccess(null), 3000);
         },
         onError: (error) => {
             toast.error(error.message || "Failed to save response");
             setSaveSuccess(false);
-            setTimeout(() => setSaveSuccess(null), 1500);
+            setTimeout(() => setSaveSuccess(null), 3000);
         },
         onSettled: () => {
             setIsSaving(false);
@@ -148,10 +151,10 @@ export default function ExamSessionPage() {
     const saveCurrentResponse = useCallback(() => {
         if (!currentQuestion || !userResponses[currentQuestion.id]) return;
 
-        setIsSaving(true);
         const response = userResponses[currentQuestion.id];
         if (!response) return;
 
+        setIsSaving(true);
         saveResponse({
             sessionId,
             response: {
@@ -163,8 +166,11 @@ export default function ExamSessionPage() {
     }, [currentQuestion, userResponses, sessionId, saveResponse]);
 
     useEffect(() => {
+        let timeout: NodeJS.Timeout;
         if (currentQuestion && userResponses[currentQuestion.id]) {
-            saveCurrentResponse();
+            timeout = setTimeout(() => {
+                saveCurrentResponse();
+            }, 1000);
         }
 
         const autoSaveInterval = setInterval(() => {
@@ -173,7 +179,10 @@ export default function ExamSessionPage() {
             }
         }, 30_000);
 
-        return () => clearInterval(autoSaveInterval);
+        return () => {
+            clearInterval(autoSaveInterval);
+            clearTimeout(timeout);
+        };
     }, [currentQuestion, userResponses, saveCurrentResponse]);
 
     const goToNextQuestion = () => {
@@ -220,8 +229,8 @@ export default function ExamSessionPage() {
     }
 
     return (
-        <div className="container flex min-h-[calc(100vh-4rem)] select-none flex-col pb-10 pt-6">
-            <div className="sticky top-0 z-10 mb-6 flex items-center justify-between bg-background py-2">
+        <div className="flex min-h-screen w-full select-none flex-col p-6 pt-0">
+            <div className="sticky top-0 z-10 mb-6 flex items-center justify-between border-b bg-background py-2 pt-6">
                 <h1 className="text-2xl font-bold tracking-tight">
                     {sessionLoading ? (
                         <Skeleton className="h-8 w-64" />
@@ -229,7 +238,7 @@ export default function ExamSessionPage() {
                         sessionData?.exam.title || "Exam Session"
                     )}
                 </h1>
-
+                <ToggleTheme className="ml-auto mr-2 h-10" />
                 <Time
                     startedAt={sessionData?.startedAt?.getTime() ?? 0}
                     timeLimit={sessionData?.exam.timeLimit ?? 0}
@@ -250,11 +259,12 @@ export default function ExamSessionPage() {
                     </div>
                 </div>
             ) : questions && questions.length > 0 ? (
-                <div className="grid flex-1 grid-cols-1 gap-6 lg:grid-cols-[280px_1fr]">
-                    <div className="hidden lg:block">
-                        <div className="sticky top-24 rounded-lg border bg-card p-4 shadow-sm">
-                            <h2 className="mb-4 font-medium">Questions</h2>
-                            <div className="grid grid-cols-5 gap-2">
+                <div className="grid flex-1 grid-cols-[280px_1fr] gap-6">
+                    <div></div>
+                    <div className="fixed">
+                        <div className="w-[280px] rounded-lg border bg-card p-2 shadow-sm">
+                            <h2 className="mb-2 font-medium">Questions</h2>
+                            <div className="grid grid-cols-5 gap-1">
                                 {questions.map((q, index) => (
                                     <Button
                                         key={q.id}
@@ -266,7 +276,7 @@ export default function ExamSessionPage() {
                                                   : "secondary"
                                         }
                                         className={cn(
-                                            "h-10 w-10 p-0",
+                                            "aspect-square w-full p-0",
                                             userResponses[q.id] &&
                                                 "border-green-500",
                                         )}
@@ -278,11 +288,22 @@ export default function ExamSessionPage() {
                                     </Button>
                                 ))}
                             </div>
-
-                            <div className="mt-8 flex flex-col gap-3">
+                            <div className="my-2 text-center text-sm text-muted-foreground">
+                                Attempted{" "}
+                                <span className="text-foreground">
+                                    {Object.keys(userResponses).length} of{" "}
+                                    {questions.length}
+                                </span>{" "}
+                                questions
+                            </div>
+                            <div className="flex flex-col gap-2">
                                 <Button
                                     variant="outline"
-                                    className="gap-2"
+                                    className={`gap-2 ${
+                                        saveSuccess === true
+                                            ? "border-green-500 text-green-500"
+                                            : ""
+                                    }`}
                                     onClick={saveCurrentResponse}
                                     disabled={
                                         isSaving ||
@@ -310,56 +331,62 @@ export default function ExamSessionPage() {
                                 </Button>
                             </div>
                         </div>
+                        <div className="mt-auto flex items-center gap-2 pt-2">
+                            <Button
+                                variant="outline"
+                                className="w-full gap-2"
+                                onClick={goToPrevQuestion}
+                                disabled={currentQuestionIndex === 0}
+                            >
+                                <ArrowLeft className="h-4 w-4" />
+                                Previous
+                            </Button>
+
+                            <Button
+                                className="w-full gap-2"
+                                onClick={goToNextQuestion}
+                                disabled={
+                                    currentQuestionIndex ===
+                                    questions.length - 1
+                                }
+                            >
+                                Next
+                                <ArrowRight className="h-4 w-4" />
+                            </Button>
+                        </div>
                     </div>
 
                     <div className="flex flex-col">
                         {currentQuestion ? (
                             <>
-                                <div className="mb-4 flex items-center justify-between">
-                                    <div>
-                                        <span className="text-sm font-medium text-muted-foreground">
-                                            Question {currentQuestionIndex + 1}{" "}
-                                            of {questions.length}
-                                        </span>
-                                        <h2 className="text-xl font-semibold">
-                                            {currentQuestion.points > 1
-                                                ? `${currentQuestion.points} points`
-                                                : `${currentQuestion.points} point`}
-                                        </h2>
-                                    </div>
-
-                                    <Button
-                                        variant="outline"
-                                        size="sm"
-                                        className="flex items-center gap-1 lg:hidden"
-                                        onClick={saveCurrentResponse}
-                                        disabled={
-                                            isSaving ||
-                                            !userResponses[currentQuestion.id]
-                                        }
-                                    >
-                                        {isSaving ? (
-                                            <Loader2 className="h-3 w-3 animate-spin" />
-                                        ) : saveSuccess === true ? (
-                                            <CheckCircle className="h-3 w-3 text-green-500" />
-                                        ) : (
-                                            <Save className="h-3 w-3" />
-                                        )}
-                                        <span className="sr-only md:not-sr-only">
-                                            Save
-                                        </span>
-                                    </Button>
+                                <div className="mb-2 flex items-center justify-start gap-2">
+                                    <span className="text-sm font-medium text-muted-foreground">
+                                        Question {currentQuestionIndex + 1} of{" "}
+                                        {questions.length}
+                                    </span>
+                                    <span className="text-sm font-medium">
+                                        [
+                                        {currentQuestion.points > 1
+                                            ? `${currentQuestion.points} points`
+                                            : `${currentQuestion.points} point`}
+                                        ]
+                                    </span>
                                 </div>
 
-                                <Card className="mb-6">
+                                <Card className="mb-6 flex flex-col lg:grid lg:grid-cols-2">
                                     <CardHeader>
-                                        <CardTitle
-                                            className="text-lg font-medium"
+                                        <div
+                                            className="tiptap"
                                             dangerouslySetInnerHTML={{
-                                                __html: currentQuestion.questionText,
+                                                __html: cleanHtmlForDisplay(
+                                                    currentQuestion.questionText,
+                                                ),
                                             }}
                                         />
-                                        <CardDescription>
+                                    </CardHeader>
+
+                                    <CardContent>
+                                        <CardDescription className="my-2">
                                             {currentQuestion.questionType ===
                                                 "multiple_choice" &&
                                                 "Select one option"}
@@ -370,9 +397,6 @@ export default function ExamSessionPage() {
                                                 "essay" &&
                                                 "Write a detailed response"}
                                         </CardDescription>
-                                    </CardHeader>
-
-                                    <CardContent>
                                         {currentQuestion.questionType ===
                                             "multiple_choice" &&
                                             currentQuestion.options && (
@@ -389,21 +413,27 @@ export default function ExamSessionPage() {
                                                             "option",
                                                         )
                                                     }
-                                                    className="space-y-3"
                                                 >
                                                     {currentQuestion.options.map(
                                                         (option) => (
                                                             <Label
                                                                 key={option.id}
-                                                                htmlFor={`option-${option.id}`}
-                                                                className="flex cursor-pointer flex-row items-start gap-2 rounded-md border border-input p-2"
+                                                                className={cn(
+                                                                    "flex cursor-pointer flex-row items-start gap-2 rounded-md border border-input p-2",
+                                                                    userResponses[
+                                                                        currentQuestion
+                                                                            .id
+                                                                    ]
+                                                                        ?.selectedOptionId ===
+                                                                        option.id &&
+                                                                        "border-primary",
+                                                                )}
                                                             >
                                                                 <RadioGroupItem
-                                                                    id={`option-${option.id}`}
                                                                     value={option.id.toString()}
                                                                 />
                                                                 <span
-                                                                    className=""
+                                                                    className="tiptap"
                                                                     dangerouslySetInnerHTML={{
                                                                         __html: option.optionText,
                                                                     }}
@@ -418,7 +448,7 @@ export default function ExamSessionPage() {
                                             "short_answer" && (
                                             <Textarea
                                                 placeholder="Enter your answer here..."
-                                                className="min-h-24"
+                                                className="h-40 max-h-80 min-h-24"
                                                 value={
                                                     userResponses[
                                                         currentQuestion.id
@@ -453,105 +483,6 @@ export default function ExamSessionPage() {
                                         )}
                                     </CardContent>
                                 </Card>
-
-                                <div className="mt-auto flex items-center justify-between">
-                                    <Button
-                                        variant="outline"
-                                        className="gap-2"
-                                        onClick={goToPrevQuestion}
-                                        disabled={currentQuestionIndex === 0}
-                                    >
-                                        <ArrowLeft className="h-4 w-4" />
-                                        Previous
-                                    </Button>
-
-                                    <div className="flex lg:hidden">
-                                        {questions.length > 3 ? (
-                                            <select
-                                                className="rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-                                                value={currentQuestionIndex}
-                                                onChange={(e) =>
-                                                    setCurrentQuestionIndex(
-                                                        parseInt(
-                                                            e.target.value,
-                                                            10,
-                                                        ),
-                                                    )
-                                                }
-                                            >
-                                                {questions.map((q, index) => (
-                                                    <option
-                                                        key={q.id}
-                                                        value={index}
-                                                    >
-                                                        Question {index + 1}
-                                                        {userResponses[q.id]
-                                                            ? " ✓"
-                                                            : ""}
-                                                    </option>
-                                                ))}
-                                            </select>
-                                        ) : (
-                                            <div className="flex gap-1">
-                                                {questions.map((q, index) => (
-                                                    <Button
-                                                        key={q.id}
-                                                        variant={
-                                                            index ===
-                                                            currentQuestionIndex
-                                                                ? "default"
-                                                                : "outline"
-                                                        }
-                                                        size="sm"
-                                                        className={cn(
-                                                            "h-9 w-9 p-0",
-                                                            userResponses[
-                                                                q.id
-                                                            ] &&
-                                                                "border-green-500",
-                                                        )}
-                                                        onClick={() =>
-                                                            setCurrentQuestionIndex(
-                                                                index,
-                                                            )
-                                                        }
-                                                    >
-                                                        {index + 1}
-                                                        {userResponses[
-                                                            q.id
-                                                        ] && (
-                                                            <div className="absolute -right-1 -top-1 size-2 rounded-full bg-green-500"></div>
-                                                        )}
-                                                    </Button>
-                                                ))}
-                                            </div>
-                                        )}
-                                    </div>
-
-                                    <div className="lg:hidden">
-                                        <Button
-                                            variant="destructive"
-                                            size="sm"
-                                            onClick={() =>
-                                                setConfirmSubmit(true)
-                                            }
-                                        >
-                                            Submit
-                                        </Button>
-                                    </div>
-
-                                    <Button
-                                        className="gap-2"
-                                        onClick={goToNextQuestion}
-                                        disabled={
-                                            currentQuestionIndex ===
-                                            questions.length - 1
-                                        }
-                                    >
-                                        Next
-                                        <ArrowRight className="h-4 w-4" />
-                                    </Button>
-                                </div>
                             </>
                         ) : (
                             <div className="grid place-items-center">

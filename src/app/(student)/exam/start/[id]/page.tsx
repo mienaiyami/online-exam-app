@@ -74,7 +74,7 @@ export default function StartExamPage() {
         (!exam.availableTo || new Date(exam.availableTo) >= new Date());
 
     return (
-        <div className="container py-10">
+        <div className="container mx-auto py-10">
             <div className="mx-auto max-w-3xl">
                 <h1 className="mb-6 text-3xl font-bold tracking-tight">
                     Exam Details
@@ -213,7 +213,16 @@ export default function StartExamPage() {
                             )}
                         </CardContent>
 
-                        <CardFooter className="flex justify-end">
+                        <CardFooter className="flex items-center justify-end gap-2">
+                            <Button
+                                variant="outline"
+                                className="h-10"
+                                onClick={() =>
+                                    router.push("/dashboard/my-exams")
+                                }
+                            >
+                                Go to Exams
+                            </Button>
                             <Button
                                 onClick={() => setConfirmOpen(true)}
                                 disabled={!isAvailable || isStarting}
@@ -235,7 +244,7 @@ export default function StartExamPage() {
                         <Button
                             variant="outline"
                             className="mt-4"
-                            onClick={() => router.push("/exam")}
+                            onClick={() => router.push("/dashboard/my-exams")}
                         >
                             Go to Exams
                         </Button>

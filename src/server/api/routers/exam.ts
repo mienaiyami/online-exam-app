@@ -556,7 +556,10 @@ export const examRouter = createTRPCRouter({
         const now = new Date();
 
         const assignments = await ctx.db.query.examAssignments.findMany({
-            where: eq(examAssignments.userId, ctx.session.user.id),
+            where: and(
+                eq(examAssignments.userId, ctx.session.user.id),
+                eq(examAssignments.completed, false),
+            ),
             with: {
                 exam: true,
             },
@@ -571,13 +574,7 @@ export const examRouter = createTRPCRouter({
 
                 return isAvailableNow;
             })
-            .map((assignment) => ({
-                ...assignment.exam,
-                assignment: {
-                    completed: assignment.completed,
-                    id: assignment.id,
-                },
-            }));
+            .map((assignment) => assignment.exam);
     }),
 
     getQuestions: protectedProcedure
