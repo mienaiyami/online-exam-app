@@ -35,7 +35,7 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
-import Time from "./_components/Time";
+import Time from "./_components/time";
 
 type Response = {
     questionId: number;

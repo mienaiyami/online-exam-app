@@ -1,8 +1,8 @@
 import { redirect } from "next/navigation";
 import { auth } from "@/server/auth";
-import { SignOutButton } from "@/components/auth/SignOutButton";
+import { SignOutButton } from "@/components/auth/sign-out-button";
 import Link from "next/link";
-import ToggleTheme from "@/components/theme/ToggleTheme";
+import ToggleTheme from "@/components/theme/toggle-theme";
 
 export default async function DashboardLayout({
     children,

@@ -193,6 +193,7 @@ export const examAssignments = createTable("exam_assignment", {
     userId: varchar("user_id", { length: 255 })
         .notNull()
         .references(() => users.id, { onDelete: "cascade" }),
+    completed: boolean("completed").notNull().default(false),
     assignedAt: timestamp("assigned_at", { withTimezone: true })
         .default(sql`CURRENT_TIMESTAMP`)
         .notNull(),

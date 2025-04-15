@@ -13,6 +13,7 @@ import {
     XCircle,
     Loader2,
     LayoutGrid,
+    LockIcon,
 } from "lucide-react";
 
 import {
@@ -24,10 +25,15 @@ import {
     CardTitle,
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Separator } from "@/components/ui/separator";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
+import {
+    Tooltip,
+    TooltipContent,
+    TooltipProvider,
+    TooltipTrigger,
+} from "@/components/ui/tooltip";
 
 import { api } from "@/trpc/react";
 import { formatDuration, cn } from "@/lib/utils";
@@ -36,6 +42,57 @@ const formatDate = (date: Date) => {
     return format(new Date(date), "MMM d, yyyy h:mm a");
 };
 
+const getStatusBadge = (status: "in_progress" | "submitted" | "graded") => {
+    switch (status) {
+        case "in_progress":
+            return (
+                <Badge
+                    variant="outline"
+                    className="border-amber-200 bg-amber-50 text-amber-700 dark:border-amber-800 dark:bg-amber-950 dark:text-amber-300"
+                >
+                    <Clock className="mr-1 h-3 w-3" />
+                    In Progress
+                </Badge>
+            );
+        case "submitted":
+            return (
+                <Badge
+                    variant="outline"
+                    className="border-blue-200 bg-blue-50 text-blue-700 dark:border-blue-800 dark:bg-blue-950 dark:text-blue-300"
+                >
+                    <CheckCircle className="mr-1 h-3 w-3" />
+                    Submitted
+                </Badge>
+            );
+        case "graded":
+            return (
+                <Badge
+                    variant="outline"
+                    className="border-green-200 bg-green-50 text-green-700 dark:border-green-800 dark:bg-green-950 dark:text-green-300"
+                >
+                    <CheckCircle className="mr-1 h-3 w-3" />
+                    Graded
+                </Badge>
+            );
+        default:
+            return null;
+    }
+};
+
+const getCompletionBadge = (completed: boolean) => {
+    if (completed) {
+        return (
+            <Badge
+                variant="outline"
+                className="absolute right-3 top-3 border-green-200 bg-green-50 text-green-700 dark:border-green-800 dark:bg-green-950 dark:text-green-300"
+            >
+                <CheckCircle className="mr-1 h-3 w-3" />
+                Completed
+            </Badge>
+        );
+    }
+    return null;
+};
 export default function MyExamsPage() {
     const [activeTab, setActiveTab] = useState<"available" | "history">(
         "available",
@@ -49,43 +106,6 @@ export default function MyExamsPage() {
 
     const { data: examHistory, isLoading: historyLoading } =
         api.examSession.getUserHistory.useQuery();
-
-    const getStatusBadge = (status: "in_progress" | "submitted" | "graded") => {
-        switch (status) {
-            case "in_progress":
-                return (
-                    <Badge
-                        variant="outline"
-                        className="border-amber-200 bg-amber-50 text-amber-700 dark:border-amber-800 dark:bg-amber-950 dark:text-amber-300"
-                    >
-                        <Clock className="mr-1 h-3 w-3" />
-                        In Progress
-                    </Badge>
-                );
-            case "submitted":
-                return (
-                    <Badge
-                        variant="outline"
-                        className="border-blue-200 bg-blue-50 text-blue-700 dark:border-blue-800 dark:bg-blue-950 dark:text-blue-300"
-                    >
-                        <CheckCircle className="mr-1 h-3 w-3" />
-                        Submitted
-                    </Badge>
-                );
-            case "graded":
-                return (
-                    <Badge
-                        variant="outline"
-                        className="border-green-200 bg-green-50 text-green-700 dark:border-green-800 dark:bg-green-950 dark:text-green-300"
-                    >
-                        <CheckCircle className="mr-1 h-3 w-3" />
-                        Graded
-                    </Badge>
-                );
-            default:
-                return null;
-        }
-    };
 
     return (
         <div className="container">
@@ -148,7 +168,13 @@ export default function MyExamsPage() {
                     ) : availableExams && availableExams.length > 0 ? (
                         <div className="grid gap-4 sm:grid-cols-2 md:grid-cols-3">
                             {availableExams.map((exam) => (
-                                <Card key={exam.id} className="overflow-hidden">
+                                <Card
+                                    key={exam.id}
+                                    className="relative overflow-hidden"
+                                >
+                                    {getCompletionBadge(
+                                        exam.assignment?.completed ?? false,
+                                    )}
                                     <CardHeader className="space-y-1">
                                         <CardTitle className="line-clamp-1">
                                             {exam.title}
@@ -187,17 +213,39 @@ export default function MyExamsPage() {
                                     </CardContent>
 
                                     <CardFooter>
-                                        <Button
-                                            asChild
-                                            className="w-full gap-2"
-                                        >
-                                            <Link
-                                                href={`/exam/start/${exam.id}`}
+                                        {exam.assignment?.completed ? (
+                                            <TooltipProvider>
+                                                <Tooltip>
+                                                    <TooltipTrigger asChild>
+                                                        <Button
+                                                            disabled
+                                                            className="w-full gap-2"
+                                                        >
+                                                            <LockIcon className="h-4 w-4" />
+                                                            Exam Completed
+                                                        </Button>
+                                                    </TooltipTrigger>
+                                                    <TooltipContent>
+                                                        <p>
+                                                            You have already
+                                                            completed this exam
+                                                        </p>
+                                                    </TooltipContent>
+                                                </Tooltip>
+                                            </TooltipProvider>
+                                        ) : (
+                                            <Button
+                                                asChild
+                                                className="w-full gap-2"
                                             >
-                                                <PlayCircle className="h-4 w-4" />
-                                                Begin Exam
-                                            </Link>
-                                        </Button>
+                                                <Link
+                                                    href={`/exam/start/${exam.id}`}
+                                                >
+                                                    <PlayCircle className="h-4 w-4" />
+                                                    Begin Exam
+                                                </Link>
+                                            </Button>
+                                        )}
                                     </CardFooter>
                                 </Card>
                             ))}

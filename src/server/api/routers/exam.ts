@@ -563,14 +563,21 @@ export const examRouter = createTRPCRouter({
         });
 
         return assignments
-            .map((assignment) => assignment.exam)
-            .filter((exam) => {
+            .filter((assignment) => {
+                const exam = assignment.exam;
                 const isAvailableNow =
                     (!exam.availableFrom || exam.availableFrom <= now) &&
                     (!exam.availableTo || exam.availableTo >= now);
 
                 return isAvailableNow;
-            });
+            })
+            .map((assignment) => ({
+                ...assignment.exam,
+                assignment: {
+                    completed: assignment.completed,
+                    id: assignment.id,
+                },
+            }));
     }),
 
     getQuestions: protectedProcedure

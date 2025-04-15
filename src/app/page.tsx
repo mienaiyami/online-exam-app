@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { SignInButton } from "@/components/auth/SignInButton";
+import { SignInButton } from "@/components/auth/sign-in-buttons";
 import { auth } from "@/server/auth";
 
 export default async function Home() {

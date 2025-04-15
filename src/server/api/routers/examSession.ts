@@ -150,6 +150,13 @@ export const examSessionRouter = createTRPCRouter({
                 });
             }
 
+            if (assignment.completed) {
+                throw new TRPCError({
+                    code: "FORBIDDEN",
+                    message: "You have already completed this exam",
+                });
+            }
+
             return await ctx.db.transaction(async (tx) => {
                 const existingSession = await tx.query.examSessions.findFirst({
                     where: and(
@@ -167,6 +174,16 @@ export const examSessionRouter = createTRPCRouter({
                     }
                     return existingSession;
                 }
+
+                await tx
+                    .update(examAssignments)
+                    .set({ completed: true })
+                    .where(
+                        and(
+                            eq(examAssignments.examId, input.examId),
+                            eq(examAssignments.userId, ctx.session.user.id),
+                        ),
+                    );
 
                 const [session] = await tx
                     .insert(examSessions)

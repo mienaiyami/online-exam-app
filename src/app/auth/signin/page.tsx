@@ -13,10 +13,8 @@ import {
     CardTitle,
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Github, Mail, AlertCircle, ArrowLeft } from "lucide-react";
+import { Github, AlertCircle, ArrowLeft } from "lucide-react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import Image from "next/image";
 import Link from "next/link";
 
 type Provider = {

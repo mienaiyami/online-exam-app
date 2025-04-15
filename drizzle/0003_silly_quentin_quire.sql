@@ -1,0 +1,1 @@
+ALTER TABLE "online-exam-app_exam_assignment" ADD COLUMN "completed" boolean DEFAULT false NOT NULL;
