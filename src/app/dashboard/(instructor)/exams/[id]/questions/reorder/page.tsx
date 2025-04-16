@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { toast } from "sonner";
 import { cn, minifyHtml } from "@/lib/utils";
+import { RichTextPreview } from "@/components/ui/tiptap/rich-text-preview";
 
 const domParser = new DOMParser();
 
@@ -124,15 +125,10 @@ export default function ReorderQuestionsPage() {
                             >
                                 <GripVertical className="mt-0.5 h-5 w-5 flex-shrink-0 text-muted-foreground" />
                                 <span>{index + 1}.</span>
-                                <span
+                                <RichTextPreview
+                                    content={minifyHtml(question.questionText)}
                                     className="line-clamp-4"
-                                    title={question.questionText}
-                                    dangerouslySetInnerHTML={{
-                                        __html: minifyHtml(
-                                            question.questionText,
-                                        ),
-                                    }}
-                                ></span>
+                                />
                             </Card>
                         </Reorder.Item>
                     );

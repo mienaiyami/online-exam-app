@@ -23,7 +23,7 @@ import {
     SelectTrigger,
     SelectValue,
 } from "@/components/ui/select";
-import RichTextEditor from "@/components/ui/rich-text-editor";
+import RichTextEditor from "@/components/ui/tiptap/rich-text-editor";
 import { type QuestionFormValues, questionFormSchema } from "../_hooks/schema";
 import { Label } from "@/components/ui/label";
 import { useEffect, useState } from "react";

@@ -1,5 +1,6 @@
 import { z } from "zod";
 import dompurify from "dompurify";
+import { cleanHtmlForDisplay } from "@/lib/utils";
 export const examFormSchema = z.object({
     title: z
         .string()
@@ -75,10 +76,14 @@ export const questionFormSchema = z
         if (data.questionType !== "multiple_choice") {
             data.options = undefined;
         }
-        data.questionText = dompurify.sanitize(data.questionText);
+        data.questionText = dompurify.sanitize(
+            cleanHtmlForDisplay(data.questionText),
+        );
         if (data.options) {
             data.options.forEach((option) => {
-                option.optionText = dompurify.sanitize(option.optionText);
+                option.optionText = dompurify.sanitize(
+                    cleanHtmlForDisplay(option.optionText),
+                );
             });
         }
         return data;

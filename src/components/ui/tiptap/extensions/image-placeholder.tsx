@@ -20,7 +20,7 @@ import {
 import {
     type CommandProps,
     type Editor,
-    Extension,
+    type Extension,
     Node,
     type NodeViewProps,
     NodeViewWrapper,

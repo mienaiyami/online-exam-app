@@ -40,6 +40,7 @@ import { StrictDeleteAlert } from "../_components/strict-delete-alert";
 import { useFinalizeExam } from "../_hooks/finalize-exam";
 import { useDeleteQuestion } from "../_hooks/delete-question";
 import { cleanHtmlForDisplay } from "@/lib/utils";
+import { RichTextPreview } from "@/components/ui/tiptap/rich-text-preview";
 
 export default function ExamDetailPage() {
     const router = useRouter();
@@ -260,7 +261,7 @@ export default function ExamDetailPage() {
                                     <CardTitle className="text-lg">
                                         Question {index + 1}
                                     </CardTitle>
-                                    <div className="flex items-center gap-2">
+                                    <div className="flex items-center gap-1">
                                         <Button
                                             variant="ghost"
                                             size="icon"
@@ -338,13 +339,9 @@ export default function ExamDetailPage() {
                             </CardHeader>
                             <Separator />
                             <CardContent className="z-2 relative py-4">
-                                <div
-                                    className="tiptap mb-4 rounded-md bg-muted/50 p-2"
-                                    dangerouslySetInnerHTML={{
-                                        __html: cleanHtmlForDisplay(
-                                            question.questionText,
-                                        ),
-                                    }}
+                                <RichTextPreview
+                                    content={question.questionText}
+                                    className="mb-2 rounded-md p-2 ring-1 ring-inset ring-primary/20"
                                 />
 
                                 {question.questionType === "multiple_choice" &&
@@ -363,22 +360,19 @@ export default function ExamDetailPage() {
                                                             <span className="w-4 text-sm text-muted-foreground">
                                                                 {i + 1}.{" "}
                                                             </span>
-                                                            <div
-                                                                className={`tiptap w-full rounded-md bg-muted/50 p-2 ${
+                                                            <RichTextPreview
+                                                                content={
+                                                                    (option.isCorrect
+                                                                        ? "(Correct)<br/>"
+                                                                        : "") +
+                                                                    option.optionText
+                                                                }
+                                                                className={`w-full rounded-md p-2 ring-1 ring-inset ring-primary/20 ${
                                                                     option.isCorrect
-                                                                        ? "bg-primary/30"
+                                                                        ? "bg-primary/10"
                                                                         : ""
                                                                 }`}
-                                                                dangerouslySetInnerHTML={{
-                                                                    __html:
-                                                                        (option.isCorrect
-                                                                            ? "(Correct)<br/>"
-                                                                            : "") +
-                                                                        cleanHtmlForDisplay(
-                                                                            option.optionText,
-                                                                        ),
-                                                                }}
-                                                            ></div>
+                                                            />
                                                         </li>
                                                     ),
                                                 )}

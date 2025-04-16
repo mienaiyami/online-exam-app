@@ -16,13 +16,16 @@ import { ToolbarProvider } from "@/components/ui/tiptap/toolbars/toolbar-provide
 // import { UndoToolbar } from "@/components/ui/tiptap/toolbars/undo";
 import { EditorContent, type Extension, useEditor } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
-import { ImageExtension } from "./tiptap/extensions/image";
-import { ImagePlaceholderToolbar } from "./tiptap/toolbars/image-placeholder-toolbar";
-import { ImagePlaceholder } from "./tiptap/extensions/image-placeholder";
-import { UndoToolbar } from "./tiptap/toolbars/undo";
+import { ImageExtension } from "./extensions/image";
+import { ImagePlaceholderToolbar } from "./toolbars/image-placeholder-toolbar";
+import { ImagePlaceholder } from "./extensions/image-placeholder";
+import { UndoToolbar } from "./toolbars/undo";
 import { RefCallBack } from "react-hook-form";
 import { cn } from "@/lib/utils";
 import { useEffect } from "react";
+// import { CodeBlockHighlight } from "./extensions/code-block-highlight";
+// import "./extensions/syntax-highlight.css";
+import "./extensions/tiptap.css";
 
 const extensions = [
     StarterKit.configure({
@@ -36,19 +39,9 @@ const extensions = [
                 class: "list-disc",
             },
         },
-        code: {
-            HTMLAttributes: {
-                class: "bg-accent rounded-md p-1",
-            },
-        },
         horizontalRule: {
             HTMLAttributes: {
                 class: "my-2",
-            },
-        },
-        codeBlock: {
-            HTMLAttributes: {
-                class: "bg-primary text-primary-foreground p-2 text-sm rounded-md p-1",
             },
         },
         heading: {
@@ -57,7 +50,18 @@ const extensions = [
                 class: "tiptap-heading",
             },
         },
+        codeBlock: {
+            HTMLAttributes: {
+                class: "tiptap-code-block",
+            },
+        },
+        code: {
+            HTMLAttributes: {
+                class: "tiptap-code",
+            },
+        },
     }),
+    // CodeBlockHighlight as unknown as Extension,
     ImageExtension,
     ImagePlaceholder.configure({
         allowedMimeTypes: {
@@ -106,7 +110,7 @@ export default function RichTextEditor({
         if (editor && editor.getHTML() !== value) {
             editor.commands.setContent(value);
         }
-    }, [value]);
+    }, [value, editor]);
 
     if (!editor) {
         return null;

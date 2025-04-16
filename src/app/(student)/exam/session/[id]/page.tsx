@@ -37,6 +37,8 @@ import { cleanHtmlForDisplay, cn } from "@/lib/utils";
 import { toast } from "sonner";
 import Time from "./_components/time";
 import ToggleTheme from "@/components/theme/toggle-theme";
+import { RichTextPreview } from "@/components/ui/tiptap/rich-text-preview";
+import { Separator } from "@/components/ui/separator";
 
 type Response = {
     questionId: number;
@@ -208,7 +210,7 @@ export default function ExamSessionPage() {
 
     if (sessionError) {
         return (
-            <div className="container py-10">
+            <div className="container mx-auto py-10">
                 <div className="mx-auto max-w-3xl rounded-md border border-red-200 bg-red-50 p-6 text-center text-red-800 dark:border-red-900 dark:bg-red-950 dark:text-red-200">
                     <AlertTriangle className="mx-auto mb-2 h-10 w-10" />
                     <h2 className="text-xl font-bold">Session Error</h2>
@@ -373,18 +375,15 @@ export default function ExamSessionPage() {
                                     </span>
                                 </div>
 
-                                <Card className="mb-6 flex flex-col lg:grid lg:grid-cols-2">
+                                <Card className="mb-6 flex flex-col lg:grid lg:grid-cols-[1fr_1px_1fr]">
                                     <CardHeader>
-                                        <div
-                                            className="tiptap"
-                                            dangerouslySetInnerHTML={{
-                                                __html: cleanHtmlForDisplay(
-                                                    currentQuestion.questionText,
-                                                ),
-                                            }}
+                                        <RichTextPreview
+                                            content={
+                                                currentQuestion.questionText
+                                            }
                                         />
                                     </CardHeader>
-
+                                    <Separator className="lg:h-full" />
                                     <CardContent>
                                         <CardDescription className="my-2">
                                             {currentQuestion.questionType ===
@@ -432,11 +431,10 @@ export default function ExamSessionPage() {
                                                                 <RadioGroupItem
                                                                     value={option.id.toString()}
                                                                 />
-                                                                <span
-                                                                    className="tiptap"
-                                                                    dangerouslySetInnerHTML={{
-                                                                        __html: option.optionText,
-                                                                    }}
+                                                                <RichTextPreview
+                                                                    content={
+                                                                        option.optionText
+                                                                    }
                                                                 />
                                                             </Label>
                                                         ),
