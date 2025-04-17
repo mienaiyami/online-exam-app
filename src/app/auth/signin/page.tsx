@@ -76,7 +76,7 @@ export default function SignInPage() {
     };
 
     return (
-        <div className="container flex h-screen w-screen flex-col items-center justify-center">
+        <div className="container mx-auto flex h-screen w-screen flex-col items-center justify-center">
             <Link
                 href="/"
                 className="absolute left-8 top-8 flex items-center gap-2 py-2 text-lg font-medium transition-colors hover:text-primary"
